@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>GaryBlog</title><link rel="manifest" href="/manifest.json"><meta name="application-name" content="GaryBlog"><meta name="msapplication-TileImage" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/favicon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="GaryBlog"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="记录开发过程的心得和遇到的问题"><meta property="og:type" content="blog"><meta property="og:title" content="GaryBlog"><meta property="og:url" content="https://removeif.github.io/"><meta property="og:site_name" content="GaryBlog"><meta property="og:description" content="记录开发过程的心得和遇到的问题"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/avatar.png"><meta property="article:published_time" content="2025-05-19T08:36:25.296Z"><meta property="article:modified_time" content="2025-05-19T08:36:25.296Z"><meta property="article:author" content="Gary"><meta property="twitter:card" content="summary"><meta property="twitter:image:src" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/avatar.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://garyaacm.github.io/2025/05/19/cuda%E5%9F%BA%E7%A1%80/"},"headline":"GaryBlog","image":["https://garyaacm.github.io/img/og_image.png"],"datePublished":"2025-05-19T08:36:25.296Z","dateModified":"2025-05-19T08:36:25.296Z","author":{"@type":"Person","name":"Gary"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject"}},"description":"记录开发过程的心得和遇到的问题"}</script><link rel="canonical" href="https://garyaacm.github.io/2025/05/19/cuda%E5%9F%BA%E7%A1%80/"><link rel="icon" href="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/favicon.png"><meta name="referrer" content="no-referrer-when-downgrade"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/font-awesome/6.0.0/css/all.min.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/highlight.js/11.7.0/styles/atom-one-light.min.css"><link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/font-awesome/5.12.0/css/all.min.css"><link rel="stylesheet" href="https://fonts.loli.net/css?family=Ubuntu:400,600|Source+Code+Pro|Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Microsoft YaHei:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&amp;amp;subset=latin,latin-ext|Inconsolata|Itim|Lobster.css"><script src="https://cdnjs.loli.net/ajax/libs/jquery/3.3.1/jquery.min.js"></script><script src="/js/globalUtils.js"></script><style>body>.footer,body>.navbar,body>.section{opacity:0}</style><!--!--><!--!--><script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" defer></script><!--!--><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/lightgallery/1.10.0/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/justifiedGallery/3.8.1/css/justifiedGallery.min.css"><!--!--><!--!--><style>.pace{-webkit-pointer-events:none;pointer-events:none;-webkit-user-select:none;-moz-user-select:none;user-select:none}.pace-inactive{display:none}.pace .pace-progress{background:#3273dc;position:fixed;z-index:2000;top:0;right:100%;width:100%;height:2px}</style><script src="https://cdnjs.loli.net/ajax/libs/pace/1.2.4/pace.min.js"></script><link rel="stylesheet" href="/live2d/waifu.css"><script type="text/javascript" async src="/live2d/autoload.js"></script><!-- hexo injector head_end start --><script>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>cuda基础操作 - GaryBlog</title><link rel="manifest" href="/manifest.json"><meta name="application-name" content="GaryBlog"><meta name="msapplication-TileImage" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/favicon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="GaryBlog"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="1、SIMT SIMD等结构SIMD：单指令多数据"><meta property="og:type" content="blog"><meta property="og:title" content="GaryBlog"><meta property="og:url" content="https://removeif.github.io/"><meta property="og:site_name" content="GaryBlog"><meta property="og:description" content="1、SIMT SIMD等结构SIMD：单指令多数据"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/avatar.png"><meta property="article:published_time" content="2025-05-19T07:00:00.000Z"><meta property="article:modified_time" content="2025-05-19T08:47:07.865Z"><meta property="article:author" content="Gary"><meta property="article:tag" content="C++"><meta property="article:tag" content="cuda"><meta property="article:tag" content="GPU"><meta property="twitter:card" content="summary"><meta property="twitter:image:src" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/avatar.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://garyaacm.github.io/2025/05/19/cuda%E5%9F%BA%E7%A1%80/"},"headline":"GaryBlog","image":["https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001735780-1606282901.png","https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001744570-1497753939.png","https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001752475-1100477295.png","https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001800006-1870518462.png","https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001809771-488438022.png","https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001850363-356121869.png","https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001916357-1658595620.webp","https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001937801-1437499549.png","https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001947961-1190125231.png","https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001957832-296063271.png","https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906002006570-2008054292.jpg"],"datePublished":"2025-05-19T07:00:00.000Z","dateModified":"2025-05-19T08:47:07.865Z","author":{"@type":"Person","name":"Gary"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject"}},"description":"1、SIMT SIMD等结构SIMD：单指令多数据"}</script><link rel="canonical" href="https://garyaacm.github.io/2025/05/19/cuda%E5%9F%BA%E7%A1%80/"><link rel="icon" href="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/favicon.png"><meta name="referrer" content="no-referrer-when-downgrade"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/font-awesome/6.0.0/css/all.min.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/highlight.js/11.7.0/styles/atom-one-light.min.css"><link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/font-awesome/5.12.0/css/all.min.css"><link rel="stylesheet" href="https://fonts.loli.net/css?family=Ubuntu:400,600|Source+Code+Pro|Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Microsoft YaHei:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&amp;amp;subset=latin,latin-ext|Inconsolata|Itim|Lobster.css"><script src="https://cdnjs.loli.net/ajax/libs/jquery/3.3.1/jquery.min.js"></script><script src="/js/globalUtils.js"></script><style>body>.footer,body>.navbar,body>.section{opacity:0}</style><!--!--><!--!--><script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" defer></script><!--!--><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/lightgallery/1.10.0/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/justifiedGallery/3.8.1/css/justifiedGallery.min.css"><!--!--><!--!--><style>.pace{-webkit-pointer-events:none;pointer-events:none;-webkit-user-select:none;-moz-user-select:none;user-select:none}.pace-inactive{display:none}.pace .pace-progress{background:#3273dc;position:fixed;z-index:2000;top:0;right:100%;width:100%;height:2px}</style><script src="https://cdnjs.loli.net/ajax/libs/pace/1.2.4/pace.min.js"></script><link rel="stylesheet" href="/live2d/waifu.css"><script type="text/javascript" async src="/live2d/autoload.js"></script><!-- hexo injector head_end start --><script>
   (function () {
       function switchTab() {
           if (!location.hash) {
@@ -29,10 +29,776 @@
       switchTab();
       window.addEventListener('hashchange', switchTab, false);
   })();
-  </script><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body class="is-3-column has-navbar-fixed-top"><nav class="navbar navbar-main is-fixed-top"><div class="container navbar-container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/logo.svg" alt="GaryBlog" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">Home</a><a class="navbar-item" href="/archives">Archives</a><a class="navbar-item" href="/categories">Categories</a><a class="navbar-item" href="/tags">Tags</a><a class="navbar-item" href="/about">About</a><a class="navbar-item" href="/album">Album</a><a class="navbar-item" href="/friend">Friend</a><a class="navbar-item" href="/message">Message</a><a class="navbar-item" href="/self-talking">Self-talking</a><a class="navbar-item" href="/music">Music</a><a class="navbar-item" href="/media">Media</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="noopener" title="Join Gitter" href="https://gitter.im/hexo-theme-amazing/community"><i class="fab fa-gitter"></i></a><a class="navbar-item" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/removeif/hexo-theme-amazing"><i class="fab fa-github"></i></a><a class="navbar-item search" title="搜索" href="javascript:;"><i class="fas fa-search"></i></a><a class="navbar-item" id="night-nav" title="Night Mode" href="javascript:;"><i class="fas fa-moon" id="night-icon"></i></a></div></div></div></nav><script type="text/javascript" src="/js/theme-setting.js"></script><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-8-tablet is-8-desktop is-9-widescreen"><!--!--><div class="card"><article class="card-content article" role="article"><div class="article-meta size-small is-uppercase level is-mobile"><div class="level-left"><i class="far fa-calendar-plus"> </i>2025-05-19  <a class="commentCountImg" href="/2025/05/19/cuda%E5%9F%BA%E7%A1%80/#comment-container"><span class="display-none-class">d41d8cd98f00b204e9800998ecf8427e</span><i class="far fa-comment-dots"></i> <span class="commentCount" id="d41d8cd98f00b204e9800998ecf8427e">99+</span>  </a><span class="level-item"><i class="far fa-clock"> </i>几秒  <i class="fas fa-pencil-alt"> </i>0.0 k</span><span class="level-item" id="busuanzi_container_page_pv"><span id="busuanzi_value_page_pv">0</span>次访问</span></div></div><h1 class="title is-3 is-size-4-mobile"> </h1><div class="content"></div><div class="article-licensing box"><div class="licensing-title"><p><a href="https://garyaacm.github.io/2025/05/19/cuda基础/">https://garyaacm.github.io/2025/05/19/cuda基础/</a></p></div><div class="licensing-meta level is-mobile"><div class="level-left"><div class="level-item is-narrow"><div><h6>作者</h6><a href="https://GaryAacm.github.io"><p>Gary</p></a></div></div><div class="level-item is-narrow"><div><h6>发布于</h6><p>2025-05-19</p></div></div><div class="level-item is-narrow"><div><h6>更新于</h6><p>2025-05-19</p></div></div><div class="level-item is-narrow"><div><h6>许可协议</h6><p><a class="icon" rel="noopener" target="_blank" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a><a class="icon" rel="noopener" target="_blank" title="Attribution" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a><a class="icon" rel="noopener" target="_blank" title="Noncommercial" href="https://creativecommons.org/licenses/by-nc/4.0/"><i class="fab fa-creative-commons-nc"></i></a></p></div></div></div></div></div><div class="recommend-area"></div><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/social-share.js/1.0.16/css/share.min.css"><div class="social-share"></div><script src="https://cdnjs.loli.net/ajax/libs/social-share.js/1.0.16/js/social-share.min.js"></script></article></div><!--!--><nav class="post-navigation mt-4 level is-mobile"><div class="level-start"><a class="article-nav-prev level level-item link-muted" href="/2025/05/19/TensorRT%E5%9F%BA%E7%A1%80/"><i class="level-item fas fa-chevron-left"></i><span class="level-item">tensorRT基础操作</span></a></div><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2025/05/19/%E7%BD%91%E7%BB%9C%E9%80%9A%E4%BF%A1%E9%97%AE%E9%A2%98/"><span class="level-item">MQTT 与 HTTP 通信协议对比及项目应用场景选择</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><!--!--><div class="card"><div class="card-content"><div class="title is-5">评论</div><div id="comment-container"></div><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/gitalk/1.6.0/gitalk.css"><script> $.getScript('/js/gitalk.min.js', function () { 
+  </script><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body class="is-3-column has-navbar-fixed-top"><nav class="navbar navbar-main is-fixed-top"><div class="container navbar-container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/logo.svg" alt="GaryBlog" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">Home</a><a class="navbar-item" href="/archives">Archives</a><a class="navbar-item" href="/categories">Categories</a><a class="navbar-item" href="/tags">Tags</a><a class="navbar-item" href="/about">About</a><a class="navbar-item" href="/album">Album</a><a class="navbar-item" href="/friend">Friend</a><a class="navbar-item" href="/message">Message</a><a class="navbar-item" href="/self-talking">Self-talking</a><a class="navbar-item" href="/music">Music</a><a class="navbar-item" href="/media">Media</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="noopener" title="Join Gitter" href="https://gitter.im/hexo-theme-amazing/community"><i class="fab fa-gitter"></i></a><a class="navbar-item" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/removeif/hexo-theme-amazing"><i class="fab fa-github"></i></a><a class="navbar-item search" title="搜索" href="javascript:;"><i class="fas fa-search"></i></a><a class="navbar-item" id="night-nav" title="Night Mode" href="javascript:;"><i class="fas fa-moon" id="night-icon"></i></a></div></div></div></nav><script type="text/javascript" src="/js/theme-setting.js"></script><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-8-tablet is-8-desktop is-9-widescreen"><!--!--><div class="card"><article class="card-content article" role="article"><div class="article-meta size-small is-uppercase level is-mobile"><div class="level-left"><i class="far fa-calendar-plus"> </i>2025-05-19  <a class="commentCountImg" href="/2025/05/19/cuda%E5%9F%BA%E7%A1%80/#comment-container"><span class="display-none-class">b172e83183b06b99fffd5dadf948ebe3</span><i class="far fa-comment-dots"></i> <span class="commentCount" id="b172e83183b06b99fffd5dadf948ebe3">99+</span>  </a><span class="level-item"><i class="far fa-clock"> </i>1 小时  <i class="fas fa-pencil-alt"> </i>8.7 k</span><span class="level-item" id="busuanzi_container_page_pv"><span id="busuanzi_value_page_pv">0</span>次访问</span></div></div><h1 class="title is-3 is-size-4-mobile">cuda基础操作</h1><div class="content"><h1 id="1、SIMT-SIMD等结构"><a href="#1、SIMT-SIMD等结构" class="headerlink" title="1、SIMT SIMD等结构"></a><strong>1、SIMT SIMD等结构</strong></h1><p><strong>SIMD：单指令多数据</strong></p>
+<span id="more"></span>
+
+<p><strong>单指令同时操作多个数据元素</strong>，数据被打包到宽寄存器中，所有数据执行相同的操作。</p>
+<p><strong>硬件依赖</strong>：由 CPU 的向量寄存器（如 SSE、AVX）实现。</p>
+<p><strong>适用场景</strong>：规则数据并行任务（如数组运算、图像滤波）。</p>
+<p><strong>工作流程示例：4个浮点数加法（使用128位SIMD寄存器）</strong></p>
+<ol>
+<li><strong>数据加载</strong>：</li>
+</ol>
+<ul>
+<li><p>将4个单精度浮点数（32位）从内存加载到SIMD寄存器（如 <code>XMM0</code> 和 <code>XMM1</code>）。</p>
+</li>
+<li><p>例如：<code>XMM0 = [A, B, C, D]</code>，<code>XMM1 = [E, F, G, H]</code>。</p>
+</li>
+</ul>
+<ol start="2">
+<li><strong>指令执行</strong>：</li>
+</ol>
+<ul>
+<li>单条指令 <code>ADDPS XMM0, XMM1</code> 执行四个浮点数的并行加法：</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">XMM0 = [A+E, B+F, C+G, D+H]</span><br></pre></td></tr></table></figure>
+
+
+<ol start="3">
+<li><strong>结果存储</strong>：</li>
+</ol>
+<ul>
+<li>将 <code>XMM0</code> 中的结果写回内存，完成4个浮点数的加法。</li>
+</ul>
+<h4 id="关键特性"><a href="#关键特性" class="headerlink" title="关键特性"></a><strong>关键特性</strong></h4><ul>
+<li><p><strong>严格同步</strong>：所有数据元素必须同时执行相同的操作，<strong>不支持条件分支</strong>。</p>
+</li>
+<li><p><strong>高效但局限</strong>：适合规则计算，但无法处理线程间独立逻辑。</p>
+</li>
+</ul>
+<p><strong>SIMT：单指令多线程</strong></p>
+<h4 id="核心特点"><a href="#核心特点" class="headerlink" title="核心特点"></a><strong>核心特点</strong></h4><ul>
+<li><p><strong>单指令控制多个线程</strong>，每个线程独立处理数据，允许条件分支（但分支分歧会降低性能）。</p>
+</li>
+<li><p><strong>硬件依赖</strong>：由 GPU 的流多处理器（SM）实现。</p>
+</li>
+<li><p><strong>适用场景</strong>：复杂并行任务（如图形渲染、深度学习）。</p>
+</li>
+</ul>
+<h4 id="工作流程示例：GPU处理像素着色器（32线程的线程束）"><a href="#工作流程示例：GPU处理像素着色器（32线程的线程束）" class="headerlink" title="工作流程示例：GPU处理像素着色器（32线程的线程束）"></a><strong>工作流程示例：GPU处理像素着色器（32线程的线程束）</strong></h4><ol start="4">
+<li><strong>线程分组</strong>：</li>
+</ol>
+<ul>
+<li>将32个线程打包为一个线程束（Warp），每个线程处理一个像素的着色计算。</li>
+</ul>
+<ol start="5">
+<li><strong>指令发射</strong>：</li>
+</ol>
+<ul>
+<li>线程束中的所有线程同时接收同一指令，例如：</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (pixel.r &gt; <span class="number">0.5</span>) </span><br><span class="line">&#123;</span><br><span class="line">    pixel.r = <span class="number">1.0</span>;  <span class="comment">// 路径1</span></span><br><span class="line">&#125; <span class="keyword">else</span> </span><br><span class="line">&#123;</span><br><span class="line">    pixel.r = <span class="number">0.0</span>;  <span class="comment">// 路径2</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+<ol start="6">
+<li><strong>分支处理</strong>：</li>
+</ol>
+<ul>
+<li><p><strong>分支分歧</strong>：假设16个线程满足条件（路径1），另外16个不满足（路径2）。</p>
+</li>
+<li><p><strong>串行执行</strong>：</p>
+<ol>
+<li><p>GPU先为路径1的16个线程执行 <code>pixel.r = 1.0</code>，路径2的线程被暂停（掩码禁用）。</p>
+</li>
+<li><p>再为路径2的16个线程执行 <code>pixel.r = 0.0</code>，路径1的线程被暂停。</p>
+</li>
+</ol>
+</li>
+</ul>
+<ol start="7">
+<li><strong>结果合并</strong>：</li>
+</ol>
+<ul>
+<li>所有线程完成分支后，继续执行后续指令（如写入显存）。</li>
+</ul>
+<h4 id="关键特性-1"><a href="#关键特性-1" class="headerlink" title="关键特性"></a><strong>关键特性</strong></h4><ul>
+<li><p><strong>动态分支</strong>：允许线程独立执行不同逻辑，但分歧会导致性能损失。</p>
+</li>
+<li><p><strong>高吞吐量</strong>：通过大量线程掩盖内存延迟，适合大规模并行任务。</p>
+</li>
+</ul>
+<h1 id="2、-SIMD-vs-SIMT-的对比实例"><a href="#2、-SIMD-vs-SIMT-的对比实例" class="headerlink" title="2、 SIMD vs SIMT 的对比实例"></a><strong>2、 SIMD vs SIMT 的对比实例</strong></h1><h4 id="场景：对数组元素执行条件加法"><a href="#场景：对数组元素执行条件加法" class="headerlink" title="场景：对数组元素执行条件加法"></a><strong>场景：对数组元素执行条件加法</strong></h4><ul>
+<li><strong>任务</strong>：对数组 <code>arr</code> 中的每个元素，若大于阈值 <code>T</code>，则加1，否则减1。</li>
+</ul>
+<h4 id="SIMD-的实现（假设4元素并行）"><a href="#SIMD-的实现（假设4元素并行）" class="headerlink" title="SIMD 的实现（假设4元素并行）"></a><strong>SIMD 的实现（假设4元素并行）</strong></h4><ol start="8">
+<li><p><strong>加载数据</strong>：将4个元素加载到寄存器 <code>V0 = [a, b, c, d]</code>。</p>
+</li>
+<li><p><strong>条件判断</strong>：</p>
+</li>
+</ol>
+<ul>
+<li><p>SIMD无法直接处理条件分支，需通过向量化条件掩码实现：</p>
+<ul>
+<li>生成掩码 <code>MASK = [a&gt;T, b&gt;T, c&gt;T, d&gt;T]</code>。</li>
+</ul>
+</li>
+</ul>
+<ol start="10">
+<li><strong>并行计算</strong>：</li>
+</ol>
+<ul>
+<li>使用掩码选择加1或减1：</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">V1 = V0 + <span class="number">1</span>;  <span class="comment">// 所有元素加1</span></span><br><span class="line">V2 = V0 - <span class="number">1</span>;  <span class="comment">// 所有元素减1</span></span><br><span class="line">结果 = 混合(V1, V2, MASK); <span class="comment">// 根据掩码选择结果</span></span><br></pre></td></tr></table></figure>
+
+
+<ol start="11">
+<li><strong>写入内存</strong>：将结果写回数组。</li>
+</ol>
+<ul>
+<li><p><strong>局限</strong>：所有分支路径必须预先计算，无法跳过无效计算。</p>
+</li>
+<li></li>
+</ul>
+<h4 id="SIMT-的实现（每个线程处理一个元素）"><a href="#SIMT-的实现（每个线程处理一个元素）" class="headerlink" title="SIMT 的实现（每个线程处理一个元素）"></a><strong>SIMT 的实现（每个线程处理一个元素）</strong></h4><ol start="12">
+<li><p><strong>线程分配</strong>：每个线程处理一个元素（如线程0处理 <code>arr[0]</code>）。</p>
+</li>
+<li><p><strong>条件判断</strong>：</p>
+</li>
+</ol>
+<ul>
+<li>线程独立执行：</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (arr[i] &gt; T) &#123;</span><br><span class="line">    arr[i] += <span class="number">1</span>;  <span class="comment">// 路径1</span></span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    arr[i] -= <span class="number">1</span>;  <span class="comment">// 路径2</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+<ol start="14">
+<li><strong>分支执行</strong>：</li>
+</ol>
+<ul>
+<li>若线程束中部分线程走路径1，部分走路径2，GPU会串行执行两段代码。</li>
+</ul>
+<ol start="15">
+<li><strong>结果写入</strong>：所有线程独立更新数组元素。</li>
+</ol>
+<ul>
+<li><strong>优势</strong>：逻辑直观，适合复杂条件；<strong>劣势</strong>：分支分歧时性能下降。</li>
+</ul>
+<h1 id="3、CPU和GPU结构"><a href="#3、CPU和GPU结构" class="headerlink" title="3、CPU和GPU结构"></a>3、CPU和GPU结构</h1><h4 id="一、CPU（中央处理器）"><a href="#一、CPU（中央处理器）" class="headerlink" title="一、CPU（中央处理器）"></a><strong>一、CPU（中央处理器）</strong></h4><p><strong>1. 设计目标</strong><br>CPU 是计算机的“大脑”，<strong>注重低延迟和通用性</strong>，擅长处理复杂逻辑、分支预测、顺序任务。例如：操作系统调度、应用程序逻辑、数据库查询等。</p>
+<p><strong>2. 核心结构</strong></p>
+<ul>
+<li><p><strong>控制单元（Control Unit）</strong><br>负责指令解码、分支预测（如流水线技术），确保指令按顺序或乱序执行。</p>
+</li>
+<li><p><strong>算术逻辑单元（ALU）</strong><br>执行整数、浮点运算，现代CPU通常包含多个ALU以支持并行指令（如超标量架构）。</p>
+</li>
+<li><p><strong>缓存系统（Cache Hierarchy）</strong></p>
+<ul>
+<li><p>L1缓存（分指令&#x2F;数据缓存）：极低延迟，约4-64KB。</p>
+</li>
+<li><p>L2缓存：较大（256KB-2MB），平衡速度与容量。</p>
+</li>
+<li><p>L3缓存（共享缓存）：多核共享，容量可达数十MB。</p>
+</li>
+</ul>
+</li>
+<li><p><strong>寄存器</strong><br>直接与ALU交互的极速存储单元（如x86的RAX、ARM的X0寄存器）。</p>
+</li>
+<li><p><strong>内存控制器</strong><br>管理对系统内存（如DDR4&#x2F;DDR5）的访问，延迟低但带宽有限（约50GB&#x2F;s）。</p>
+</li>
+</ul>
+<p><strong>3. 典型特征</strong></p>
+<ul>
+<li><p><strong>核心数量少</strong>：消费级CPU通常4-16核。</p>
+</li>
+<li><p><strong>高时钟频率</strong>：3-5 GHz，通过超线程（Hyper-Threading）提升线程利用率。</p>
+</li>
+<li><p><strong>复杂分支预测</strong>：通过预测执行（Speculative Execution）减少流水线停顿。</p>
+</li>
+</ul>
+<h4 id="二、GPU（图形处理器）"><a href="#二、GPU（图形处理器）" class="headerlink" title="二、GPU（图形处理器）"></a><strong>二、GPU（图形处理器）</strong></h4><p><strong>1. 设计目标</strong><br>GPU 专为<strong>高吞吐量并行计算</strong>优化，适合处理大量相似任务（如像素渲染、矩阵运算）。典型应用：游戏渲染、深度学习训练、科学模拟。</p>
+<p><strong>2. 核心结构</strong></p>
+<ul>
+<li><p><strong>流多处理器（Streaming Multiprocessor, SM）</strong></p>
+<ul>
+<li><p><strong>CUDA核心（NVIDIA）&#x2F; 流处理器（AMD）</strong>：每个SM包含数十至数百个计算单元。</p>
+</li>
+<li><p><strong>Warp调度器</strong>：管理线程束（Warp），以SIMT（单指令多线程）模式执行。</p>
+</li>
+<li><p><strong>共享内存（Shared Memory）</strong>：SM内高速缓存（64KB-192KB），用于线程间通信。</p>
+</li>
+</ul>
+</li>
+<li><p><strong>全局显存（VRAM）</strong><br>GDDR6&#x2F;HBM2显存，带宽高达1TB&#x2F;s（如NVIDIA RTX 4090带宽为1TB&#x2F;s）。</p>
+</li>
+<li><p><strong>特殊功能单元</strong><br>RT Core（光线追踪）、Tensor Core（AI加速）等专用硬件。</p>
+</li>
+</ul>
+<p><strong>3. 典型特征</strong></p>
+<ul>
+<li><p><strong>海量核心</strong>：NVIDIA A100 GPU含6912 CUDA核心。</p>
+</li>
+<li><p><strong>高内存带宽</strong>：显存带宽是CPU的10-20倍。</p>
+</li>
+<li><p><strong>SIMD&#x2F;SIMT并行</strong>：单指令同时操作多个数据（如32线程为一个Warp执行相同指令）。</p>
+</li>
+</ul>
+<p><strong>下图所示：</strong></p>
+<p><img src="https://tc-cdn.flowus.cn/oss/2dc831ab-f714-4b50-b496-364ecc082358/b88845567404fcac6d763049a2ebd570.jpg?time=1747643400&token=e6249198d9f0ce9590f006f5c47784e6b45b908e21c1ed44e5796b8246d7c60c&role=free" alt="b88845567404fcac6d763049a2ebd570.jpg"></p>
+<p>为CPU和GPU两者的结构。</p>
+<p>上图中：</p>
+<ul>
+<li><p>绿色代表的是computational units(可计算单元) 或者称之为 cores(核心)，</p>
+</li>
+<li><p>橙色代表memories（内存） ，</p>
+</li>
+<li><p>黄色代表的是control units（控制单元）。</p>
+</li>
+</ul>
+<h4 id="计算单元（cores）："><a href="#计算单元（cores）：" class="headerlink" title="计算单元（cores）："></a>计算单元（cores）：</h4><p>由图可以知道，<strong>CPU的计算单元是“大”而“少”的</strong>，<strong>然而GPU的计算单元是“小”而“多”的</strong>。</p>
+<p>GPU的微观物理结构：</p>
+<p><strong>NVidia Tesla架构</strong></p>
+<p><img src="https://tc-cdn.flowus.cn/oss/212ccf09-56ce-4df1-96f3-168732b42c20/image.png?time=1747643400&token=e2f533cf2c8be83b6c3b440fa9fffd2a361b42b4fb3d2b984ed212d6a491897a&role=free" alt="image.png"></p>
+<ul>
+<li><p>拥有7组TPC（Texture&#x2F;Processor Cluster，纹理处理簇）</p>
+</li>
+<li><p>每个TPC有两组SM（Stream Multiprocessor，流多处理器）</p>
+</li>
+<li><p>每个SM包含：</p>
+<ul>
+<li><p>6个SP（Streaming Processor，流处理器）</p>
+</li>
+<li><p>2个SFU（Special Function Unit，特殊函数单元）</p>
+</li>
+<li><p>L1缓存、MT Issue（多线程指令获取）、C-Cache（常量缓存）、共享内存</p>
+</li>
+</ul>
+</li>
+<li><p>除了TPC核心单元，还有与显存、CPU、系统内存交互的各种部件。</p>
+</li>
+<li></li>
+</ul>
+<h4 id="仅仅展示一种结构的GPU，其余大同小异。"><a href="#仅仅展示一种结构的GPU，其余大同小异。" class="headerlink" title="仅仅展示一种结构的GPU，其余大同小异。"></a>仅仅展示一种结构的GPU，其余大同小异。</h4><h4 id="GPU架构的共性："><a href="#GPU架构的共性：" class="headerlink" title="GPU架构的共性："></a><strong>GPU架构的共性：</strong></h4><ul>
+<li><p>GPC</p>
+</li>
+<li><p>TPC</p>
+</li>
+<li><p>Thread</p>
+</li>
+<li><p>SM、SMX、SMM</p>
+</li>
+<li><p>Warp</p>
+</li>
+<li><p>SP</p>
+</li>
+<li><p>Core</p>
+</li>
+<li><p>ALU</p>
+</li>
+<li><p>FPU</p>
+</li>
+<li><p>SFU</p>
+</li>
+<li><p>ROP</p>
+</li>
+<li><p>Load&#x2F;Store Unit</p>
+</li>
+<li><p>L1 Cache</p>
+</li>
+<li><p>L2 Cache</p>
+</li>
+<li><p>Memory</p>
+</li>
+<li><p>Register File</p>
+</li>
+</ul>
+<h4 id="GPU工作机制："><a href="#GPU工作机制：" class="headerlink" title="GPU工作机制："></a>GPU工作机制：</h4><p>从Fermi开始NVIDIA使用类似的原理架构，使用一个Giga Thread Engine来管理所有正在进行的工作，GPU被划分成多个GPCs(Graphics Processing Cluster)，每个GPC拥有多个SM（SMX、SMM）和一个光栅化引擎(Raster Engine)，它们其中有很多的连接，最显著的是Crossbar，它可以连接GPCs和其它功能性模块（例如ROP或其他子系统）。</p>
+<p>程序员编写的shader是在SM上完成的。每个SM包含许多为线程执行数学运算的Core（核心）。例如，一个线程可以是顶点或像素着色器调用。这些Core和其它单元由Warp Scheduler驱动，Warp Scheduler管理一组32个线程作为Warp（线程束）并将要执行的指令移交给Dispatch Units。</p>
+<p>GPU中实际有多少这些单元（每个GPC有多少个SM，多少个GPC ……）取决于芯片配置本身。例如，GM204有4个GPC，每个GPC有4个SM，但Tegra X1有1个GPC和2个SM，它们均采用Maxwell设计。SM设计本身（内核数量，指令单位，调度程序……）也随着时间的推移而发生变化，并帮助使芯片变得如此高效，可以从高端台式机扩展到笔记本电脑移动。</p>
+<p><img src="https://tc-cdn.flowus.cn/oss/5105ebd9-b2d1-49f8-9d24-2cb29dc06874/image.png?time=1747643400&token=3ffb3d79c275949b4b4df9e89bc3d8ebd638fa0f6f350b6a0af9c3fa9346dc9c&role=free" alt="image.png"></p>
+<p><strong>如上图，对于某些GPU（如Fermi部分型号）的单个SM，包含：</strong></p>
+<ul>
+<li><p>32个运算核心 （Core，也叫流处理器Stream Processor）</p>
+</li>
+<li><p>16个LD&#x2F;ST（load&#x2F;store）模块来加载和存储数据</p>
+</li>
+<li><p>4个SFU（Special function units）执行特殊数学运算（sin、cos、log等）</p>
+</li>
+<li><p>128KB寄存器（Register File）</p>
+</li>
+<li><p>64KB L1缓存</p>
+</li>
+<li><p>全局内存缓存（Uniform Cache）</p>
+</li>
+<li><p>纹理读取单元</p>
+</li>
+<li><p>纹理缓存（Texture Cache）</p>
+</li>
+<li><p>PolyMorph Engine：多边形引擎负责属性装配（attribute Setup）、顶点拉取(VertexFetch)、曲面细分、栅格化（这个模块可以理解专门处理顶点相关的东西）。</p>
+</li>
+<li><p>2个Warp Schedulers：这个模块负责warp调度，一个warp由32个线程组成，warp调度器的指令通过Dispatch Units送到Core执行。</p>
+</li>
+<li><p>指令缓存（Instruction Cache）</p>
+</li>
+<li><p>内部链接网络（Interconnect Network）</p>
+</li>
+</ul>
+<h4 id="GPU资源机制："><a href="#GPU资源机制：" class="headerlink" title="GPU资源机制："></a><strong>GPU资源机制：</strong></h4><p><strong>1、内存架构：</strong></p>
+<p>部分架构的GPU与CPU类似，也有多级缓存结构：寄存器、L1缓存、L2缓存、GPU显存、系统显存。</p>
+<p><img src="https://tc-cdn.flowus.cn/oss/f524fbbd-0ee7-4867-9302-ad5d893f4d18/image.png?time=1747643400&token=98d4704a1f7dfc5f451fbbf53432e7dc1d28ef87150a05660471cc80e3a22771&role=free" alt="image.png"></p>
+<h4 id="GPU-Context和延迟："><a href="#GPU-Context和延迟：" class="headerlink" title="GPU Context和延迟："></a><strong>GPU Context和延迟：</strong></h4><p>由于SIMT技术的引入，导致很多同一个SM内的很多Core并不是独立的，当它们当中有部分Core需要访问到纹理、常量缓存和全局内存时，就会导致非常大的卡顿（Stall）。</p>
+<p>例如下图中，有4组上下文（Context），它们共用同一组运算单元ALU。</p>
+<p><img src="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001735780-1606282901.png" alt="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001735780-1606282901.png"></p>
+<p>假设第一组Context需要访问缓存或内存，会导致2~3个周期的延迟，此时调度器会激活第二组Context以利用ALU：</p>
+<p><img src="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001744570-1497753939.png" alt="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001744570-1497753939.png"></p>
+<p>当第二组Context访问缓存或内存又卡住，会依次激活第三、第四组Context，直到第一组Context恢复运行或所有都被激活：</p>
+<p><img src="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001752475-1100477295.png" alt="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001752475-1100477295.png"></p>
+<p>延迟的后果是每组Context的总体执行时间被拉长了：</p>
+<p><img src="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001800006-1870518462.png" alt="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001800006-1870518462.png"></p>
+<p>但是，越多Context可用就越可以提升运算单元的吞吐量，比如下图的18组Context的架构可以最大化地提升吞吐量：</p>
+<p><img src="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001809771-488438022.png" alt="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001809771-488438022.png"></p>
+<h4 id="CPU-GPU异构系统："><a href="#CPU-GPU异构系统：" class="headerlink" title="CPU-GPU异构系统："></a><strong>CPU-GPU异构系统：</strong></h4><p>根据CPU和GPU是否共享内存，可分为两种类型的CPU-GPU架构：</p>
+<p><img src="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001850363-356121869.png" alt="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001850363-356121869.png"></p>
+<p>上图左是<strong>分离式架构</strong>，CPU和GPU各自有独立的缓存和内存，它们通过PCI-e等总线通讯。这种结构的缺点在于 PCI-e 相对于两者具有低带宽和高延迟，数据的传输成了其中的性能瓶颈。目前使用非常广泛，如PC、智能手机等。</p>
+<p>上图右是<strong>耦合式架构</strong>，CPU 和 GPU 共享内存和缓存。AMD 的 APU 采用的就是这种结构，目前主要使用在游戏主机中，如 PS4。</p>
+<p>在存储管理方面，分离式结构中 CPU 和 GPU 各自拥有独立的内存，两者共享一套虚拟地址空间，必要时会进行内存拷贝。对于耦合式结构，GPU 没有独立的内存，与 GPU 共享系统内存，由 MMU 进行存储管理。</p>
+<h4 id=""><a href="#" class="headerlink" title=""></a></h4><h3 id="CPU-GPU数据流"><a href="#CPU-GPU数据流" class="headerlink" title="CPU-GPU数据流"></a><strong>CPU-GPU数据流</strong></h3><p>下图是分离式架构的CPU-GPU的数据流程图：</p>
+<p><img src="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001916357-1658595620.webp" alt="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001916357-1658595620.webp"></p>
+<p>1、将主存的处理数据复制到显存中。</p>
+<p>2、CPU指令驱动GPU。</p>
+<p>3、GPU中的每个运算单元并行处理。此步会从显存存取数据。</p>
+<p>4、GPU将显存结果传回主存。</p>
+<h4 id="显像机制："><a href="#显像机制：" class="headerlink" title="显像机制："></a><strong>显像机制：</strong></h4><ul>
+<li><p><strong>水平和垂直同步信号</strong></p>
+<p>在早期的CRT显示器，电子枪从上到下逐行扫描，扫描完成后显示器就呈现一帧画面。然后电子枪回到初始位置进行下一次扫描。为了同步显示器的显示过程和系统的视频控制器，显示器会用硬件时钟产生一系列的定时信号。</p>
+<p><img src="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001937801-1437499549.png" alt="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001937801-1437499549.png"></p>
+<p>当电子枪换行进行扫描时，显示器会发出一个水平同步信号（horizonal synchronization），简称 <strong>HSync</strong></p>
+<p>当一帧画面绘制完成后，电子枪回复到原位，准备画下一帧前，显示器会发出一个垂直同步信号（vertical synchronization），简称 <strong>VSync</strong>。</p>
+<p>显示器通常以固定频率进行刷新，这个刷新率就是 VSync 信号产生的频率。虽然现在的显示器基本都是液晶显示屏了，但其原理基本一致。</p>
+<p>CPU将计算好显示内容提交至 GPU，GPU 渲染完成后将渲染结果存入帧缓冲区，视频控制器会按照 VSync 信号逐帧读取帧缓冲区的数据，经过数据转换后最终由显示器进行显示。</p>
+<p><img src="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001947961-1190125231.png" alt="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001947961-1190125231.png"></p>
+</li>
+<li><p><strong>双缓冲</strong></p>
+<p>在单缓冲下，帧缓冲区的读取和刷新都都会有比较大的效率问题，经常会出现相互等待的情况，导致帧率下降。</p>
+<p>为了解决效率问题，GPU 通常会引入两个缓冲区，即 <strong>双缓冲机制</strong>。在这种情况下，GPU 会预先渲染一帧放入一个缓冲区中，用于视频控制器的读取。当下一帧渲染完毕后，GPU 会直接把视频控制器的指针指向第二个缓冲器。</p>
+<p><img src="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001957832-296063271.png" alt="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906001957832-296063271.png"></p>
+</li>
+<li><p><strong>垂直同步</strong></p>
+<p>双缓冲虽然能解决效率问题，但会引入一个新的问题。当视频控制器还未读取完成时，即屏幕内容刚显示一半时，GPU 将新的一帧内容提交到帧缓冲区并把两个缓冲区进行交换后，视频控制器就会把新的一帧数据的下半段显示到屏幕上，造成画面撕裂现象：</p>
+<p><img src="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906002006570-2008054292.jpg" alt="https://img2018.cnblogs.com/blog/1617944/201909/1617944-20190906002006570-2008054292.jpg"></p>
+<p>为了解决这个问题，GPU 通常有一个机制叫做<strong>垂直同步</strong>（简写也是V-Sync），当开启垂直同步后，GPU 会等待显示器的 VSync 信号发出后，才进行新的一帧渲染和缓冲区更新。这样能解决画面撕裂现象，也增加了画面流畅度，但需要消费更多的计算资源，也会带来部分延迟。</p>
+</li>
+</ul>
+<h1 id="4、cuda-c-编程"><a href="#4、cuda-c-编程" class="headerlink" title="4、cuda c++编程"></a>4、cuda c++编程</h1><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/baishuiniyaonulia/article/details/123023666?ops_request_misc=%257B%2522request%255Fid%2522%253A%252279e764f96a7aab2d51a1bceefd6324a7%2522%252C%2522scm%2522%253A%252220140713.130102334..%2522%257D&request_id=79e764f96a7aab2d51a1bceefd6324a7&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~top_positive~default-1-123023666-null-null.142%5Ev102%5Epc_search_result_base9&utm_term=cuda%20c&spm=1018.2226.3001.4187">cuda c++博客</a></p>
+<p><a target="_blank" rel="noopener" href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#c-language-extensions">cuda官方技术手册</a></p>
+<h3 id="详细内容看官方技术手册"><a href="#详细内容看官方技术手册" class="headerlink" title="详细内容看官方技术手册"></a>详细内容看官方技术手册</h3><p><a target="_blank" rel="noopener" href="https://face2ai.com/CUDA-F-1-1-%E5%BC%82%E6%9E%84%E8%AE%A1%E7%AE%97-CUDA/">https://face2ai.com/CUDA-F-1-1-%E5%BC%82%E6%9E%84%E8%AE%A1%E7%AE%97-CUDA/</a></p>
+<h4 id="更具体可以查看："><a href="#更具体可以查看：" class="headerlink" title="更具体可以查看："></a>更具体可以查看：</h4><p><a target="_blank" rel="noopener" href="https://github.com/Tony-Tan/CUDA_Freshman">博客</a></p>
+<h1 id="6、cuda编程常用以及技巧"><a href="#6、cuda编程常用以及技巧" class="headerlink" title="6、cuda编程常用以及技巧"></a>6、cuda编程常用以及技巧</h1><p>1、同步</p>
+<p><img src="https://tc-cdn.flowus.cn/oss/5d8f2802-34cc-456f-beef-2ea4fcb89c82/image.png?time=1747643400&token=b99a634074311ffabf0e8867ec2e8c8133458abdaab7be2b8c3433c3ced928d6&role=free" alt="image.png"></p>
+<p><strong>__syncthread();</strong></p>
+<p>这个函数完成，这个函数只能同步同一个块内的线程，不能同步不同块内的线程，想要同步不同块内的线程，就只能让核函数执行完成，控制程序交换主机，这种方式来同步所有线程。</p>
+<p>内存竞争是非常危险的，一定要非常小心，这里经常出错。</p>
+<p>2、错误处理</p>
+<p><img src="https://tc-cdn.flowus.cn/oss/6fe0eba2-bfd6-4b11-a640-27ce8111e096/image.png?time=1747643400&token=a507baafa64d98e3ba3215632999515f3d82234251c79adc876ef8dd5d7a47f8&role=free" alt="image.png"></p>
+<p>使用实例：</p>
+<ol>
+<li><strong>在CUDA API调用处使用</strong></li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">CHECK</span>(<span class="built_in">cudaMalloc</span>(&amp;d_data, size)); <span class="comment">// 检查内存分配</span></span><br><span class="line"><span class="built_in">CHECK</span>(<span class="built_in">cudaMemcpy</span>(d_data, h_data, size, cudaMemcpyHostToDevice)); <span class="comment">// 检查内存拷贝</span></span><br></pre></td></tr></table></figure>
+
+
+<p><strong>2.在核函数调用后使用</strong></p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">myKernel&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;(params);</span><br><span class="line"><span class="built_in">CHECK</span>(<span class="built_in">cudaGetLastError</span>()); <span class="comment">// 检查核函数启动错误</span></span><br><span class="line"><span class="built_in">CHECK</span>(<span class="built_in">cudaDeviceSynchronize</span>()); <span class="comment">// 检查核函数执行错误</span></span><br></pre></td></tr></table></figure>
+
+
+
+
+<p>3、计算grid的方法</p>
+<ol start="16">
+<li>在CUDA编程中，计算网格（<code>grid</code>）尺寸的方式是为了确保所有数据元素都能被线程覆盖，即使数据维度无法被块（<code>block</code>）维度整除。代码中<code>grid</code>的计算公式为：</li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Cpp</span></span><br><span class="line"><span class="function">dim3 <span class="title">grid</span><span class="params">((nx<span class="number">-1</span>)/block.x<span class="number">+1</span>, (ny<span class="number">-1</span>)/block.y<span class="number">+1</span>)</span></span>;</span><br></pre></td></tr></table></figure>
+
+
+<h3 id="这种计算方式的原因："><a href="#这种计算方式的原因：" class="headerlink" title="这种计算方式的原因："></a>这种计算方式的原因：</h3><ol>
+<li><strong>向上取整的除法</strong>：</li>
+</ol>
+<pre><code>- **公式**：`(n-1)/block + 1` 等价于数学上的 **向上取整**（`ceil(n / block)`）。
+
+- **目的**：确保当数据维度（如`nx`或`ny`）无法被块维度（如`block.x`或`block.y`）整除时，仍然分配足够的块来处理所有元素。
+</code></pre>
+<ol start="2">
+<li><strong>覆盖所有数据点</strong>：</li>
+</ol>
+<pre><code>- 每个块的线程数固定（例如`block(4,2)`），但数据维度可能无法整除块维度。例如：
+
+  - 若`nx=7`，`block.x=4`，直接除法`7/4=1.75`，但需要2个块才能覆盖所有7个元素。
+
+  - 使用`(7-1)/4 +1 = 1 +1 = 2`，确保生成2个块，第二个块处理剩余元素（虽然部分线程可能超出数据范围，但需在核函数中检查边界）。
+</code></pre>
+<p>4、关于GPU的模型框架</p>
+<p><a target="_blank" rel="noopener" href="https://face2ai.com/CUDA-F-3-1-CUDA%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%A6%82%E8%BF%B0/">https://face2ai.com/CUDA-F-3-1-CUDA%E6%89%A7%E8%A1%8C%E6%A8%A1%E5%9E%8B%E6%A6%82%E8%BF%B0/</a></p>
+<p>SM则包括下面这些资源：</p>
+<ul>
+<li><p>执行单元（CUDA核）</p>
+</li>
+<li><p>调度线程束的调度器和调度单元</p>
+</li>
+<li><p>共享内存，寄存器文件和一级缓存</p>
+</li>
+</ul>
+<h3 id="一、SM的硬件组成"><a href="#一、SM的硬件组成" class="headerlink" title="一、SM的硬件组成"></a>一、SM的硬件组成</h3><ol start="17">
+<li><strong>CUDA核心分组</strong></li>
+</ol>
+<ul>
+<li><p><strong>16个CUDA核心为一组</strong>：每个SM内部将CUDA核心（即流处理器）按功能或指令类型分组。例如，在Fermi架构中，每个SM包含32个CUDA核心，分为两组，每组16个，分别处理整数和浮点运算。</p>
+<p>这种分组允许SM同时执行不同类型的指令（如ALU和FPU操作）</p>
+</li>
+<li><p><strong>核心类型分工</strong>：整数核心处理逻辑运算和地址计算，浮点核心专注于浮点运算，例如在矩阵乘法或物理模拟中。</p>
+</li>
+</ul>
+<ol start="18">
+<li><strong>辅助功能单元</strong></li>
+</ol>
+<ul>
+<li><p><strong>16个加载&#x2F;存储单元</strong>：每个SM配备多个独立的内存访问单元，用于处理线程的全局内存读写请求。例如，Fermi架构的SM有16个加载&#x2F;存储单元，允许每个时钟周期处理16个线程的内存操作</p>
+</li>
+<li><p><strong>4个特殊功能单元（SFU）</strong>：SFU负责执行复杂数学运算（如三角函数、指数函数）和原子操作。这些单元与CUDA核心并行工作，加速特定计算场景</p>
+</li>
+</ul>
+<h3 id="二、线程块与线程束的执行逻辑"><a href="#二、线程块与线程束的执行逻辑" class="headerlink" title="二、线程块与线程束的执行逻辑"></a>二、线程块与线程束的执行逻辑</h3><ol start="19">
+<li><strong>线程块分配到SM后的处理</strong></li>
+</ol>
+<ul>
+<li><p><strong>线程块分割为线程束（Warp）</strong>：线程块被分配到SM后，会被自动划分为多个<strong>线程束</strong>（Warp），每个Warp包含32个线程。例如，一个包含256线程的块会被分为8个Warp</p>
+</li>
+<li><p><strong>Warp调度的必要性</strong>：SM的硬件资源（如寄存器、共享内存）有限，无法同时执行所有线程。通过Warp调度器管理多个Warp的交替执行，可隐藏内存访问延迟，提高利用率</p>
+</li>
+</ul>
+<ol start="20">
+<li><strong>线程束的交替执行机制</strong></li>
+</ol>
+<ul>
+<li><p><strong>零开销上下文切换</strong>：当某个Warp因等待内存访问或分支分歧暂停时，调度器立即切换至其他就绪的Warp，无需保存&#x2F;恢复寄存器状态，实现无缝切换</p>
+</li>
+<li><p><strong>SIMT执行模型</strong>：同一Warp内的32个线程必须执行相同的指令流。若线程因条件分支出现分歧（如<code>if-else</code>），SM会串行执行各分支路径，导致性能下降</p>
+<p>。例如，若半数线程进入<code>if</code>分支，SM需分两次执行该Warp</p>
+</li>
+</ul>
+<h3 id="三、硬件与软件的协同优化"><a href="#三、硬件与软件的协同优化" class="headerlink" title="三、硬件与软件的协同优化"></a>三、硬件与软件的协同优化</h3><ol start="21">
+<li><strong>资源分配影响性能</strong></li>
+</ol>
+<ul>
+<li><p><strong>寄存器与共享内存竞争</strong>：每个Warp需分配独立寄存器，而共享内存由块内所有线程共享。若块内线程过多，可能导致资源不足，限制SM同时驻留的Warp数量</p>
+</li>
+<li><p><strong>Bank冲突避免</strong>：共享内存分为32个Bank，若同一Warp内多个线程访问同一Bank的不同地址，会导致串行化。编程时需通过内存布局优化（如矩阵转置填充）避免冲突</p>
+</li>
+</ul>
+<ol start="22">
+<li><strong>实际应用中的权衡</strong></li>
+</ol>
+<ul>
+<li><p><strong>块大小设计</strong>：块的线程数通常设为32的倍数（如128或256），以适配Warp调度机制，减少资源碎片</p>
+</li>
+<li><p><strong>动态并行与同步</strong>：CUDA提供<code>__syncthreads()</code>实现块内同步，但块间无法直接同步，需通过多次内核启动或原子操作协调</p>
+</li>
+</ul>
+<p>在CUDA架构中，<strong>CUDA核心（Streaming Processor, SP）</strong>与<strong>线程块（Thread Block）</strong>是硬件与编程模型的两个关键层级，其关系可从以下角度解析：</p>
+<h3 id="一、物理与逻辑的对应关系"><a href="#一、物理与逻辑的对应关系" class="headerlink" title="一、物理与逻辑的对应关系"></a>一、物理与逻辑的对应关系</h3><ol start="23">
+<li><strong>CUDA核心的硬件定位</strong> CUDA核心是GPU的物理计算单元，每个核心负责执行单一线程的算术逻辑运算（ALU&#x2F;FPU）。例如，在Ampere架构的A100 GPU中，每个SM（流多处理器）包含64个CUDA核心。</li>
+</ol>
+<ul>
+<li><strong>并行计算能力</strong>：单个CUDA核心无法直接对应线程块，但多个CUDA核心通过SIMT（单指令多线程）架构并行执行线程束（Warp）中的指令。</li>
+</ul>
+<ol start="24">
+<li><strong>线程块的编程模型角色</strong> 线程块是逻辑上的线程集合，由程序员定义。每个线程块包含多个线程（如128-1024个），并被分配到一个SM上执行。</li>
+</ol>
+<ul>
+<li><strong>资源分配</strong>：线程块占用SM的共享内存和寄存器资源，例如一个SM最多同时驻留32个线程块（A100 GPU）。</li>
+</ul>
+<h3 id="二、执行机制中的交互"><a href="#二、执行机制中的交互" class="headerlink" title="二、执行机制中的交互"></a>二、执行机制中的交互</h3><ol start="25">
+<li><strong>线程块到CUDA核心的映射</strong></li>
+</ol>
+<ul>
+<li><p><strong>线程束（Warp）划分</strong>：<strong>线程块被分割为多个32线程的Warp，由SM的Warp调度器分配给CUDA核心执行</strong>。例如，一个包含256线程的块会被分为8个Warp。</p>
+</li>
+<li><p><strong>并行执行</strong>：SM中的CUDA核心通过时间片轮转（如Fermi架构每个SM支持48个Warp并发）隐藏指令延迟，实现高效并行。</p>
+</li>
+</ul>
+<ol start="26">
+<li><strong>资源竞争与性能优化</strong></li>
+</ol>
+<ul>
+<li><p><strong>寄存器与共享内存限制</strong>：每个线程块需分配独立寄存器和共享内存。若线程块过大（如每个线程使用过多寄存器），会限制SM同时处理的块数量，导致资源利用率下降</p>
+</li>
+<li><p><strong>最佳实践</strong>：建议线程块大小为32的倍数（适配Warp机制），例如128或256线程&#x2F;块，以平衡并行度和资源占用</p>
+</li>
+</ul>
+<h4 id="5、CPU的优势"><a href="#5、CPU的优势" class="headerlink" title="5、CPU的优势"></a>5、CPU的优势</h4><pre><code>   **当我们的程序包含大量的分支判断时，从程序角度来说，程序的逻辑是很复杂的，因为一个分支就会有两条路可以走，如果有10个分支，那么一共有1024条路走，CPU采用流水线话作业，如果每次等到分支执行完再执行下面的指令会造成很大的延迟，所以现在处理器都采用分支预测技术，而CPU的这项技术相对于gpu来说高级了不止一点点，而这也是GPU与CPU的不同，设计初衷就是为了解决不同的问题。CPU适合逻辑复杂计算量不大的程序，比如操作系统，控制系统，GPU适合大量计算简单逻辑的任务，所以被用来算数。**
+</code></pre>
+<h4 id="6、分支预测"><a href="#6、分支预测" class="headerlink" title="6、分支预测"></a>6、分支预测</h4><p><strong>当一个线程束的32个线程执行这段代码的时候，如果其中16个执行if中的代码段，而另外16个执行else中的代码块，同一个线程束中的线程，执行不同的指令，这叫做线程束的分化。<br>我们知道在每个指令周期，线程束中的所有线程执行相同的指令，但是线程束又是分化的，所以这似乎是相悖的，但是事实上这两个可以不矛盾。<br>解决矛盾的办法就是每个线程都执行所有的if和else部分，当一部分con成立的时候，执行if块内的代码，有一部分线程con不成立，那么他们怎么办？继续执行else？不可能的，因为分配命令的调度器就一个，所以这些con不成立的线程等待，就像分水果，你不爱吃，那你就只能看着别人吃，等大家都吃完了，再进行下一轮（也就是下一个指令）线程束分化会产生严重的性能下降。条件分支越多，并行性削弱越严重。<br>注意线程束分化研究的是一个线程束中的线程，不同线程束中的分支互不影响。</strong></p>
+<p><strong>因为线程束分化导致的性能下降就应该用线程束的方法解决，根本思路是避免同一个线程束内的线程分化，而让我们能控制线程束内线程行为的原因是线程块中线程分配到线程束是有规律的而不是随机的。这就使得我们根据线程编号来设计分支是可以的，补充说明下，当一个线程束中所有的线程都执行if或者，都执行else时，不存在性能下降；只有当线程束内有分歧产生分支的时候，性能才会急剧下降。<br>线程束内的线程是可以被我们控制的，那么我们就把都执行if的线程塞到一个线程束中，或者让一个线程束中的线程都执行if，另外线程都执行else的这种方式可以将效率提高很多。</strong></p>
+<p>7、关于内存分配</p>
+<p><img src="https://tc-cdn.flowus.cn/oss/fef66256-bc04-414d-ae6b-c0728dc8e08b/image.png?time=1747643400&token=a4a523be45938c84111f447f397f46e7b04ffdd723edf8ac31210ea4a2423126&role=free" alt="image.png"></p>
+<h4 id="8、关于充分利用线程以及避免分支分化"><a href="#8、关于充分利用线程以及避免分支分化" class="headerlink" title="8、关于充分利用线程以及避免分支分化"></a>8、关于充分利用线程以及避免分支分化</h4><p><a target="_blank" rel="noopener" href="https://chat.deepseek.com/a/chat/s/dbe94e4d-afd7-4e34-9f55-0c0ff38b8388">deepseek</a></p>
+<p><a target="_blank" rel="noopener" href="https://face2ai.com/CUDA-F-3-4-%E9%81%BF%E5%85%8D%E5%88%86%E6%94%AF%E5%88%86%E5%8C%96/">博客</a></p>
+<p><strong>通过重新映射，使得一个线程束里面的全部线程全部活跃，另外一个线程束不工作，提高效率。</strong></p>
+<h4 id="9、cuda性能分析"><a href="#9、cuda性能分析" class="headerlink" title="9、cuda性能分析"></a>9、cuda性能分析</h4><p><strong>使用nsys操作</strong></p>
+<h3 id="1-基础用法"><a href="#1-基础用法" class="headerlink" title="1. 基础用法"></a><strong>1. 基础用法</strong></h3><h4 id="1-1-生成性能分析报告"><a href="#1-1-生成性能分析报告" class="headerlink" title="1.1 生成性能分析报告"></a><strong>1.1 生成性能分析报告</strong></h4><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys profile [选项] ./your_cuda_program</span><br></pre></td></tr></table></figure>
+
+
+<ul>
+<li><p><strong>默认输出</strong>：生成 <code>report.qdrep</code>（二进制文件）和 <code>report.sqlite</code>（数据库文件）。</p>
+</li>
+<li><p><strong>查看概要统计</strong>：</p>
+</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys stats report.qdrep  # 显示关键指标汇总</span><br></pre></td></tr></table></figure>
+
+
+<h4 id="1-2-常用选项"><a href="#1-2-常用选项" class="headerlink" title="1.2 常用选项"></a><strong>1.2 常用选项</strong></h4><table>
+<thead>
+<tr>
+<th>选项</th>
+<th>说明</th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-o &lt;文件名&gt;</code></td>
+<td>指定输出文件名（默认 <code>report</code>）</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--stats=true</code></td>
+<td>输出统计摘要（类似旧版 <code>nvprof</code>）</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--trace=cuda,osrt</code></td>
+<td>跟踪 CUDA API 和操作系统事件</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--force-overwrite=true</code></td>
+<td>覆盖已有报告文件</td>
+<td></td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="2-跟踪特定事件"><a href="#2-跟踪特定事件" class="headerlink" title="2. 跟踪特定事件"></a><strong>2. 跟踪特定事件</strong></h3><h4 id="2-1-跟踪范围控制"><a href="#2-1-跟踪范围控制" class="headerlink" title="2.1 跟踪范围控制"></a><strong>2.1 跟踪范围控制</strong></h4><ul>
+<li><strong>跟踪 CUDA 活动</strong>：</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys profile --trace=cuda ./your_program</span><br></pre></td></tr></table></figure>
+
+
+<ul>
+<li><strong>跟踪 CPU 系统调用</strong>：</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys profile --trace=osrt ./your_program  <span class="meta"># osrt = OS Runtime</span></span><br></pre></td></tr></table></figure>
+
+
+<ul>
+<li><p><strong>多类事件组合</strong>：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys profile --trace=cuda,cublas,nvtx ./your_program</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="2-2-时间范围限定"><a href="#2-2-时间范围限定" class="headerlink" title="2.2 时间范围限定"></a><strong>2.2 时间范围限定</strong></h4><p>分析程序特定阶段的性能：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys profile --capture-range=cudaProfilerApi --capture-range-end=stop ./your_program</span><br></pre></td></tr></table></figure>
+
+
+<p>需在代码中添加范围标记：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cudaProfilerStart</span>();  <span class="comment">// 开始记录</span></span><br><span class="line"><span class="comment">// 目标代码段</span></span><br><span class="line"><span class="built_in">cudaProfilerStop</span>();   <span class="comment">// 结束记录</span></span><br></pre></td></tr></table></figure>
+
+
+<hr>
+<h3 id="3-硬件计数器与指标"><a href="#3-硬件计数器与指标" class="headerlink" title="3. 硬件计数器与指标"></a><strong>3. 硬件计数器与指标</strong></h3><h4 id="3-1-收集-GPU-硬件指标"><a href="#3-1-收集-GPU-硬件指标" class="headerlink" title="3.1 收集 GPU 硬件指标"></a><strong>3.1 收集 GPU 硬件指标</strong></h4><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys profile --gpu-metrics=device=<span class="number">0</span>,metric1,metric2 ./your_program</span><br></pre></td></tr></table></figure>
+
+
+<ul>
+<li><strong>示例</strong>（收集 SM 效率和内存带宽）：</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys profile --gpu-metrics=device=<span class="number">0</span>,sm__throughput.avg.pct_of_peak_sustained,smsp__cycles_active.avg.pct_of_peak_sustained ./your_program</span><br></pre></td></tr></table></figure>
+
+
+<ul>
+<li><strong>查看支持的指标</strong>：</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys profile --list-gpu-metrics</span><br></pre></td></tr></table></figure>
+
+
+<h4 id="3-2-收集-CPU-性能数据"><a href="#3-2-收集-CPU-性能数据" class="headerlink" title="3.2 收集 CPU 性能数据"></a><strong>3.2 收集 CPU 性能数据</strong></h4><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">nsys profile --sample=cpu ./your_program</span><br><span class="line">  # 结合 CPU 采样和 GPU 跟踪</span><br><span class="line">nsys profile --trace=cuda --sample=cpu ./your_program</span><br></pre></td></tr></table></figure>
+
+
+<hr>
+<h3 id="4-多进程与多-GPU-分析"><a href="#4-多进程与多-GPU-分析" class="headerlink" title="4. 多进程与多 GPU 分析"></a><strong>4. 多进程与多 GPU 分析</strong></h3><h4 id="4-1-分析-MPI-多进程程序"><a href="#4-1-分析-MPI-多进程程序" class="headerlink" title="4.1 分析 MPI 多进程程序"></a><strong>4.1 分析 MPI 多进程程序</strong></h4><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys launch mpirun -n <span class="number">4</span> ./your_mpi_program</span><br></pre></td></tr></table></figure>
+
+
+<p>生成单独的报告文件（每个进程一个报告）。</p>
+<h4 id="4-2-多-GPU-设备分析"><a href="#4-2-多-GPU-设备分析" class="headerlink" title="4.2 多 GPU 设备分析"></a><strong>4.2 多 GPU 设备分析</strong></h4><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys profile --cuda-device-range=<span class="number">0</span><span class="number">-3</span> ./your_multi_gpu_program</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>--cuda-device-range=0,2</code>：仅分析 GPU 0 和 2。</li>
+</ul>
+<hr>
+<h3 id="5-高级分析功能"><a href="#5-高级分析功能" class="headerlink" title="5. 高级分析功能"></a><strong>5. 高级分析功能</strong></h3><h4 id="5-1-统一内存分析"><a href="#5-1-统一内存分析" class="headerlink" title="5.1 统一内存分析"></a><strong>5.1 统一内存分析</strong></h4><p>跟踪统一内存（Unified Memory）的页迁移：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys profile --unified-memory-profiling=per-process-device ./your_program</span><br></pre></td></tr></table></figure>
+
+
+<h4 id="5-2-时间线可视化分析"><a href="#5-2-时间线可视化分析" class="headerlink" title="5.2 时间线可视化分析"></a><strong>5.2 时间线可视化分析</strong></h4><p>生成时间线数据并用 GUI 查看：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">nsys profile -o timeline ./your_program</span><br><span class="line">nsight-sys timeline.qdrep</span><br></pre></td></tr></table></figure>
+
+
+<p><strong>GUI 功能</strong>：</p>
+<ul>
+<li><p>查看 CPU&#x2F;GPU 并行时间线</p>
+</li>
+<li><p>分析内核与内存传输的重叠情况</p>
+</li>
+<li><p>标记关键区域（需代码中添加 NVTX 标记）</p>
+</li>
+</ul>
+<h4 id="5-3-添加-NVTX-标记"><a href="#5-3-添加-NVTX-标记" class="headerlink" title="5.3 添加 NVTX 标记"></a><strong>5.3 添加 NVTX 标记</strong></h4><p>在代码中插入自定义标记：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;nvtx3/nvToolsExt.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="built_in">nvtxRangePushA</span>(<span class="string">&quot;Data Preparation&quot;</span>);  <span class="comment">// 开始标记</span></span><br><span class="line"><span class="comment">// 数据准备代码</span></span><br><span class="line"><span class="built_in">nvtxRangePop</span>();                      <span class="comment">// 结束标记</span></span><br></pre></td></tr></table></figure>
+
+
+<p>生成带 NVTX 的报告：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys profile --trace=nvtx ./your_program</span><br></pre></td></tr></table></figure>
+
+
+<hr>
+<h3 id="6-导出与二次分析"><a href="#6-导出与二次分析" class="headerlink" title="6. 导出与二次分析"></a><strong>6. 导出与二次分析</strong></h3><h4 id="6-1-导出为-CSV"><a href="#6-1-导出为-CSV" class="headerlink" title="6.1 导出为 CSV"></a><strong>6.1 导出为 CSV</strong></h4><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys <span class="keyword">export</span> --type=csv timeline.qdrep -o timeline.csv</span><br></pre></td></tr></table></figure>
+
+
+<p>导出的事件包括 CUDA API、内核、内存操作等。</p>
+<h4 id="6-2-使用-Python-分析"><a href="#6-2-使用-Python-分析" class="headerlink" title="6.2 使用 Python 分析"></a><strong>6.2 使用 Python 分析</strong></h4><p>通过 <code>nsys</code> 的 Python API 解析 <code>.sqlite</code> 文件：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> sqlite3</span><br><span class="line">conn = sqlite<span class="number">3.</span><span class="built_in">connect</span>(<span class="string">&#x27;report.sqlite&#x27;</span>)</span><br><span class="line">cursor = conn.<span class="built_in">execute</span>(<span class="string">&quot;SELECT * FROM CUPTI_ACTIVITY_KIND_KERNEL&quot;</span>)</span><br><span class="line"><span class="keyword">for</span> row in cursor.<span class="built_in">fetchall</span>():</span><br><span class="line">    <span class="built_in">print</span>(row)  # 输出内核执行详情</span><br></pre></td></tr></table></figure>
+
+
+<hr>
+<h3 id="7-实战示例"><a href="#7-实战示例" class="headerlink" title="7. 实战示例"></a><strong>7. 实战示例</strong></h3><h4 id="7-1-分析矩阵乘法性能"><a href="#7-1-分析矩阵乘法性能" class="headerlink" title="7.1 分析矩阵乘法性能"></a><strong>7.1 分析矩阵乘法性能</strong></h4><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">nsys profile \</span><br><span class="line">  --trace=cuda,nvtx \</span><br><span class="line">  --gpu-metrics=device=<span class="number">0</span>,sm__throughput.avg.pct_of_peak_sustained \</span><br><span class="line">  -o matmul_profile \</span><br><span class="line">  ./matmul</span><br></pre></td></tr></table></figure>
+
+
+<p>分析内容：</p>
+<ul>
+<li><p>内核执行时间线</p>
+</li>
+<li><p>SM 计算单元利用率</p>
+</li>
+<li><p>自定义 NVTX 标记区域</p>
+</li>
+</ul>
+<h4 id="7-2-优化内存传输"><a href="#7-2-优化内存传输" class="headerlink" title="7.2 优化内存传输"></a><strong>7.2 优化内存传输</strong></h4><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nsys profile --trace=cuda --stats=<span class="literal">true</span> ./memory_bound_program</span><br></pre></td></tr></table></figure>
+
+
+<p>检查输出中的 <code>cuda_gpu_mem_time_sum</code>，观察：</p>
+<ul>
+<li><p><code>HtoD</code>（主机到设备）和 <code>DtoH</code>（设备到主机）耗时</p>
+</li>
+<li><p>内存带宽利用率</p>
+</li>
+</ul>
+<h4 id="8、一级缓存编译"><a href="#8、一级缓存编译" class="headerlink" title="8、一级缓存编译"></a>8、一级缓存编译</h4><p>在CUDA编译时通过<code>-Xptxas -dlcm=cg</code>启用一级缓存控制，具体命令如下：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nvcc -arch=sm_75 -Xptxas -dlcm=cg your_code.cu -o your_program</span><br></pre></td></tr></table></figure>
+
+
+<p><strong>分步解释：</strong></p>
+<ol>
+<li><strong>架构指定</strong>：</li>
+</ol>
+  <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-arch=sm_75  # 指定Turing架构（根据实际GPU调整）</span><br></pre></td></tr></table></figure>
+
+
+<ul>
+<li>必须与GPU计算能力匹配（如RTX 2080用sm_75，A100用sm_80）</li>
+</ul>
+<ol start="2">
+<li><strong>缓存控制选项</strong>：</li>
+</ol>
+  <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-Xptxas -dlcm=cg  # 加载缓存模式设置</span><br></pre></td></tr></table></figure>
+
+
+<ul>
+<li><p><code>dlcm</code> &#x3D; Device Load Cache Mode</p>
+</li>
+<li><p><code>cg</code> &#x3D; Cache Global（全局内存访问使用L1缓存）</p>
+</li>
+</ul>
+<ol start="3">
+<li><strong>完整编译流程</strong>：</li>
+</ol>
+  <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># 带L1缓存的编译</span><br><span class="line">nvcc -O3 -arch=sm_75 -Xptxas -dlcm=cg main.cu -o aligned_cached</span><br><span class="line"></span><br><span class="line"># 禁用L1缓存的对比编译</span><br><span class="line">nvcc -O3 -arch=sm_75 -Xptxas -dlcm=ca main.cu -o aligned_nocache</span><br></pre></td></tr></table></figure>
+
+
+<p><strong>关键参数说明：</strong></p>
+<table>
+<thead>
+<tr>
+<th>选项</th>
+<th>作用</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-dlcm=ca</code></td>
+<td>强制所有加载通过L1缓存</td>
+<td>有数据局部性的访问模式</td>
+</tr>
+<tr>
+<td><code>-dlcm=cg</code></td>
+<td>绕过L1直接使用L2缓存</td>
+<td>无重用的大步长访问</td>
+</tr>
+<tr>
+<td><code>-dlcm=cs</code></td>
+<td>流式加载（自动缓存策略）</td>
+<td>默认模式</td>
+</tr>
+</tbody></table>
+<p><strong>验证方法：</strong></p>
+<ol>
+<li>查看PTX汇编确认效果：</li>
+</ol>
+  <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nvcc -arch=sm_75 --ptxas-options=-v -Xptxas -dlcm=cg -ptx main.cu</span><br></pre></td></tr></table></figure>
+
+
+<p>  输出中观察：</p>
+  <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">lca::CG       <span class="comment">// 表示使用全局缓存模式</span></span><br></pre></td></tr></table></figure>
+
+
+<ol start="2">
+<li>性能对比测试：</li>
+</ol>
+  <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">./aligned_cached <span class="number">0</span>   # 对齐访问+L1缓存</span><br><span class="line">./aligned_nocache <span class="number">0</span>  # 对齐访问+无L1缓存</span><br><span class="line">./aligned_cached <span class="number">1</span>   # 非对齐访问+L1缓存</span><br></pre></td></tr></table></figure>
+
+
+<p><strong>典型性能差异（RTX 3080测试）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>访问模式</th>
+<th>L1缓存</th>
+<th>带宽利用率</th>
+<th>执行时间</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>对齐</td>
+<td>启用</td>
+<td>92%</td>
+<td>1.2ms</td>
+</tr>
+<tr>
+<td>对齐</td>
+<td>禁用</td>
+<td>88%</td>
+<td>1.3ms</td>
+</tr>
+<tr>
+<td>非对齐</td>
+<td>启用</td>
+<td>68%</td>
+<td>2.1ms</td>
+</tr>
+<tr>
+<td>非对齐</td>
+<td>禁用</td>
+<td>72%</td>
+<td>1.9ms</td>
+</tr>
+</tbody></table>
+</div><div class="article-licensing box"><div class="licensing-title"><p>cuda基础操作</p><p><a href="https://garyaacm.github.io/2025/05/19/cuda基础/">https://garyaacm.github.io/2025/05/19/cuda基础/</a></p></div><div class="licensing-meta level is-mobile"><div class="level-left"><div class="level-item is-narrow"><div><h6>作者</h6><a href="https://GaryAacm.github.io"><p>Gary</p></a></div></div><div class="level-item is-narrow"><div><h6>发布于</h6><p>2025-05-19</p></div></div><div class="level-item is-narrow"><div><h6>更新于</h6><p>2025-05-19</p></div></div><div class="level-item is-narrow"><div><h6>许可协议</h6><p><a class="icon" rel="noopener" target="_blank" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a><a class="icon" rel="noopener" target="_blank" title="Attribution" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a><a class="icon" rel="noopener" target="_blank" title="Noncommercial" href="https://creativecommons.org/licenses/by-nc/4.0/"><i class="fab fa-creative-commons-nc"></i></a></p></div></div></div></div></div><div class="recommend-area"><div class="recommend-post"><span class="is-size-6 has-text-grey has-mr-7"># 相关文章</span><br><span>  1.<a class="is-size-6" href="/2025/05/19/TensorRT%E5%9F%BA%E7%A1%80/" target="_blank">tensorRT基础操作</a><br></span><span>  2.<a class="is-size-6" href="/2025/05/19/%E7%BD%91%E7%BB%9C%E9%80%9A%E4%BF%A1%E9%97%AE%E9%A2%98/" target="_blank">MQTT 与 HTTP 通信协议对比及项目应用场景选择</a><br></span><span>  3.<a class="is-size-6" href="/2025/05/18/Machine_Learning(1)/" target="_blank">机器学习基础知识总结</a><br></span><span>  4.<a class="is-size-6" href="/2025/05/17/%E5%85%B3%E4%BA%8Ethread%E7%BA%BF%E7%A8%8B%E5%92%8CPOSIX%E7%9A%84%E5%BA%94%E7%94%A8/" target="_blank">关于 thread 线程和 POSIX 的应用</a><br></span><span>  5.<a class="is-size-6" href="/2025/05/17/Plan/" target="_blank">关于个人发展的规划</a><br></span><span>  6.<a class="is-size-6" href="/2024/12/05/Linux%E4%B8%8B%E7%9A%84QT%E8%AE%BE%E8%AE%A1/" target="_blank">利用 qmake 构建 Qt 项目与开发过程细节说明</a><br></span><span>  7.<a class="is-size-6" href="/2024/11/18/Linux%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%BC%80%E5%8F%91-max30102_tca9548/" target="_blank">MAX30102 多通道 I2C 通讯与初始化问题分析</a><br></span></div></div><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/social-share.js/1.0.16/css/share.min.css"><div class="social-share"></div><script src="https://cdnjs.loli.net/ajax/libs/social-share.js/1.0.16/js/social-share.min.js"></script></article></div><!--!--><nav class="post-navigation mt-4 level is-mobile"><div class="level-start"><a class="article-nav-prev level level-item link-muted" href="/2025/05/19/TensorRT%E5%9F%BA%E7%A1%80/"><i class="level-item fas fa-chevron-left"></i><span class="level-item">tensorRT基础操作</span></a></div><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2025/05/19/%E7%BD%91%E7%BB%9C%E9%80%9A%E4%BF%A1%E9%97%AE%E9%A2%98/"><span class="level-item">MQTT 与 HTTP 通信协议对比及项目应用场景选择</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><!--!--><div class="card"><div class="card-content"><div class="title is-5">评论</div><div id="comment-container"></div><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/gitalk/1.6.0/gitalk.css"><script> $.getScript('/js/gitalk.min.js', function () { 
             var gitalk = new Gitalk({
             language:'zh-CN',
-            id: 'd41d8cd98f00b204e9800998ecf8427e',
+            id: 'b172e83183b06b99fffd5dadf948ebe3',
             repo: 'blog_comment',
             owner: 'Gray',
             clientID: '46a9f3481b46ea0129d8',
@@ -47,14 +813,14 @@
             enableHotKey: true,
             isLocked: false
         })
-        gitalk.render('comment-container')});</script></div></div></div><div class="column column-left is-4-tablet is-4-desktop is-3-widescreen  order-1 is-sticky"><!--!--><div class="card widget" data-type="profile"><div class="card-content"><nav class="level"><div class="level-item has-text-centered flex-shrink-1"><div><figure class="image is-128x128 mx-auto mb-2"><img class="avatar is-rounded" src="https://cdn.jsdelivr.net/gh/GaryAacm/image-hosting@main/bg.jpg" alt="Gary"></figure><p class="title is-size-4 is-block" style="line-height:inherit;">Gary</p><p class="is-size-6 is-block">天下万般兵刃，唯有过往伤人最深</p><p class="is-size-6 is-flex justify-content-center"><i class="fas fa-map-marker-alt mr-1"></i><span>中国</span></p></div></div></nav><nav class="level is-mobile"><div class="level-item has-text-centered is-marginless"><div><p class="heading">文章</p><a href="/archives/"><p class="title">10</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">分类</p><a href="/categories/"><p class="title">3</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">标签</p><a href="/tags/"><p class="title">20</p></a></div></div></nav><div class="level"><a class="level-item button is-primary is-rounded" href="https://github.com/GaryAacm" target="_blank" rel="noopener">关注我</a></div><div class="level is-mobile"><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="Github" href="https://github.com/GaryAacm"><i class="fab fa-github"></i></a><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="RSS" href="/atom.xml"><i class="fas fa-rss"></i></a></div><div><hr><p id="hitokoto">:D 一言句子获取中...</p><script type="text/javascript" defer>function getYiyan(){
+        gitalk.render('comment-container')});</script></div></div></div><div class="column column-left is-4-tablet is-4-desktop is-3-widescreen  order-1 is-sticky"><!--!--><div class="card widget" data-type="profile"><div class="card-content"><nav class="level"><div class="level-item has-text-centered flex-shrink-1"><div><figure class="image is-128x128 mx-auto mb-2"><img class="avatar is-rounded" src="https://cdn.jsdelivr.net/gh/GaryAacm/image-hosting@main/bg.jpg" alt="Gary"></figure><p class="title is-size-4 is-block" style="line-height:inherit;">Gary</p><p class="is-size-6 is-block">天下万般兵刃，唯有过往伤人最深</p><p class="is-size-6 is-flex justify-content-center"><i class="fas fa-map-marker-alt mr-1"></i><span>中国</span></p></div></div></nav><nav class="level is-mobile"><div class="level-item has-text-centered is-marginless"><div><p class="heading">文章</p><a href="/archives/"><p class="title">10</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">分类</p><a href="/categories/"><p class="title">3</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">标签</p><a href="/tags/"><p class="title">22</p></a></div></div></nav><div class="level"><a class="level-item button is-primary is-rounded" href="https://github.com/GaryAacm" target="_blank" rel="noopener">关注我</a></div><div class="level is-mobile"><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="Github" href="https://github.com/GaryAacm"><i class="fab fa-github"></i></a><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="RSS" href="/atom.xml"><i class="fas fa-rss"></i></a></div><div><hr><p id="hitokoto">:D 一言句子获取中...</p><script type="text/javascript" defer>function getYiyan(){
                                 $.getJSON("https://v1.hitokoto.cn/", function (data) {
                                 if(data){
                                     $('#hitokoto').html("");
                                     $('#hitokoto').append("<strong style='color: #3273dc;'>"+data.hitokoto+"</strong>"+
                                     "<p>"+"来源《"+data.from+"》</p><p>提供者-"+data.creator+"</p>");
                                 }});}
-                                $(function (){getYiyan();$('#hitokoto').click(function(){getYiyan();})});</script></div></div></div><div class="card widget" data-type="links"><div class="card-content"><div class="menu"><h3 class="menu-label">链接</h3><ul class="menu-list"><li><a class="level is-mobile" href="https://hexo.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Hexo</span></span><span class="level-right"><span class="level-item tag">hexo.io</span></span></a></li><li><a class="level is-mobile" href="https://bulma.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Bulma</span></span><span class="level-right"><span class="level-item tag">bulma.io</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新评论</h3><span class="body_hot_comment">加载中，最新评论有1分钟缓存...</span></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新文章</h3><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-19T12:00:00.000Z">2025-05-19</time></p><p class="title"><a href="/2025/05/19/TensorRT%E5%9F%BA%E7%A1%80/">tensorRT基础操作</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-19T08:36:25.296Z">2025-05-19</time></p><p class="title"><a href="/2025/05/19/cuda%E5%9F%BA%E7%A1%80/"> </a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-18T16:10:00.000Z">2025-05-19</time></p><p class="title"><a href="/2025/05/19/%E7%BD%91%E7%BB%9C%E9%80%9A%E4%BF%A1%E9%97%AE%E9%A2%98/">MQTT 与 HTTP 通信协议对比及项目应用场景选择</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-18T13:00:00.000Z">2025-05-18</time></p><p class="title"><a href="/2025/05/18/git%E7%89%88%E6%9C%AC%E7%AE%A1%E7%90%86/">Git 本地版本管理操作教程</a></p><p class="categories"><a href="/categories/%E6%95%99%E7%A8%8B/">教程</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-18T01:00:00.000Z">2025-05-18</time></p><p class="title"><a href="/2025/05/18/Machine_Learning(1)/">机器学习基础知识总结</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">分类</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BB%8B%E7%BB%8D/"><span class="level-start"><span class="level-item">个人介绍</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/"><span class="level-start"><span class="level-item">技术分享</span></span><span class="level-end"><span class="level-item tag">7</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E6%95%99%E7%A8%8B/"><span class="level-start"><span class="level-item">教程</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">归档</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/archives/2025/05/"><span class="level-start"><span class="level-item">五月 2025</span></span><span class="level-end"><span class="level-item tag">8</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2024/12/"><span class="level-start"><span class="level-item">十二月 2024</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2024/11/"><span class="level-start"><span class="level-item">十一月 2024</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">标签</h3><div class="field is-grouped is-grouped-multiline"><div class="control"><a class="tags has-addons" href="/tags/C/"><span class="tag">C++</span><span class="tag is-grey-lightest">3</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%BC%80%E5%8F%91/"><span class="tag">嵌入式开发</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/API/"><span class="tag">API</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Git/"><span class="tag">Git</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/HTTP/"><span class="tag">HTTP</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Hexo/"><span class="tag">Hexo</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/I2C/"><span class="tag">I2C</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Linux/"><span class="tag">Linux</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/MAX30102/"><span class="tag">MAX30102</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/MQTT/"><span class="tag">MQTT</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/POSIX/"><span class="tag">POSIX</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/QThread/"><span class="tag">QThread</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Qt/"><span class="tag">Qt</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/qmake/"><span class="tag">qmake</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/tensorRT/"><span class="tag">tensorRT</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E4%B8%AA%E4%BA%BA%E8%A7%84%E5%88%92/"><span class="tag">个人规划</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA/"><span class="tag">博客搭建</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"><span class="tag">机器学习</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E7%89%88%E6%9C%AC%E6%8E%A7%E5%88%B6/"><span class="tag">版本控制</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E7%BD%91%E7%BB%9C%E9%80%9A%E4%BF%A1/"><span class="tag">网络通信</span><span class="tag is-grey-lightest">1</span></a></div></div><div class="field is-grouped is-grouped-multiline"><a class="tags has-addons" href="/tags/"><span class="tag">查看全部&gt;&gt;</span></a></div></div></div></div><div class="card widget" data-type="subscribe-email"><div class="card-content"><div class="menu"><h3 class="menu-label">订阅更新</h3><form action="https://feedburner.google.com/fb/a/mailverify" method="post" target="popupwindow" onsubmit="window.open(&#039;https://feedburner.google.com/fb/a/mailverify?uri=&#039;,&#039;popupwindow&#039;,&#039;scrollbars=yes,width=550,height=520&#039;);return true"><input type="hidden" value="" name="uri"><input type="hidden" name="loc" value="en_US"><div class="field has-addons"><div class="control has-icons-left is-expanded"><input class="input" name="email" type="email" placeholder="Email"><span class="icon is-small is-left"><i class="fas fa-envelope"></i></span></div><div class="control"><input class="button" type="submit" value="订阅"></div></div></form></div></div></div><!--!--><div class="column-right-shadow is-hidden-widescreen"></div></div></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/logo.svg" alt="GaryBlog" height="28"></a><p class="size-small"><span>&copy; 2025 Gary</span>  Powered by <a href="https://hexo.io/" target="_blank">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank">Icarus</a> &amp; <a href="https://github.com/removeif/hexo-theme-amazing" target="_blank">Amazing</a> <br><span>© 版权说明：[本网站所有内容均收集于互联网或自己创作,<br />&nbsp;&nbsp;&nbsp;&nbsp;方便于网友与自己学习交流，如有侵权，请<a href="/message" target="_blank">留言</a>，立即处理]<br /></span><span><span id="statistic-times">loading...</span><script>function createTime(time) {
+                                $(function (){getYiyan();$('#hitokoto').click(function(){getYiyan();})});</script></div></div></div><div class="card widget" data-type="links"><div class="card-content"><div class="menu"><h3 class="menu-label">链接</h3><ul class="menu-list"><li><a class="level is-mobile" href="https://hexo.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Hexo</span></span><span class="level-right"><span class="level-item tag">hexo.io</span></span></a></li><li><a class="level is-mobile" href="https://bulma.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Bulma</span></span><span class="level-right"><span class="level-item tag">bulma.io</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新评论</h3><span class="body_hot_comment">加载中，最新评论有1分钟缓存...</span></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新文章</h3><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-19T12:00:00.000Z">2025-05-19</time></p><p class="title"><a href="/2025/05/19/TensorRT%E5%9F%BA%E7%A1%80/">tensorRT基础操作</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-19T07:00:00.000Z">2025-05-19</time></p><p class="title"><a href="/2025/05/19/cuda%E5%9F%BA%E7%A1%80/">cuda基础操作</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-18T16:10:00.000Z">2025-05-19</time></p><p class="title"><a href="/2025/05/19/%E7%BD%91%E7%BB%9C%E9%80%9A%E4%BF%A1%E9%97%AE%E9%A2%98/">MQTT 与 HTTP 通信协议对比及项目应用场景选择</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-18T13:00:00.000Z">2025-05-18</time></p><p class="title"><a href="/2025/05/18/git%E7%89%88%E6%9C%AC%E7%AE%A1%E7%90%86/">Git 本地版本管理操作教程</a></p><p class="categories"><a href="/categories/%E6%95%99%E7%A8%8B/">教程</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-18T01:00:00.000Z">2025-05-18</time></p><p class="title"><a href="/2025/05/18/Machine_Learning(1)/">机器学习基础知识总结</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">分类</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BB%8B%E7%BB%8D/"><span class="level-start"><span class="level-item">个人介绍</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/"><span class="level-start"><span class="level-item">技术分享</span></span><span class="level-end"><span class="level-item tag">8</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E6%95%99%E7%A8%8B/"><span class="level-start"><span class="level-item">教程</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">归档</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/archives/2025/05/"><span class="level-start"><span class="level-item">五月 2025</span></span><span class="level-end"><span class="level-item tag">8</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2024/12/"><span class="level-start"><span class="level-item">十二月 2024</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2024/11/"><span class="level-start"><span class="level-item">十一月 2024</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">标签</h3><div class="field is-grouped is-grouped-multiline"><div class="control"><a class="tags has-addons" href="/tags/C/"><span class="tag">C++</span><span class="tag is-grey-lightest">4</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%BC%80%E5%8F%91/"><span class="tag">嵌入式开发</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/API/"><span class="tag">API</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/GPU/"><span class="tag">GPU</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Git/"><span class="tag">Git</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/HTTP/"><span class="tag">HTTP</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Hexo/"><span class="tag">Hexo</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/I2C/"><span class="tag">I2C</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Linux/"><span class="tag">Linux</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/MAX30102/"><span class="tag">MAX30102</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/MQTT/"><span class="tag">MQTT</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/POSIX/"><span class="tag">POSIX</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/QThread/"><span class="tag">QThread</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Qt/"><span class="tag">Qt</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/cuda/"><span class="tag">cuda</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/qmake/"><span class="tag">qmake</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/tensorRT/"><span class="tag">tensorRT</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E4%B8%AA%E4%BA%BA%E8%A7%84%E5%88%92/"><span class="tag">个人规划</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA/"><span class="tag">博客搭建</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"><span class="tag">机器学习</span><span class="tag is-grey-lightest">1</span></a></div></div><div class="field is-grouped is-grouped-multiline"><a class="tags has-addons" href="/tags/"><span class="tag">查看全部&gt;&gt;</span></a></div></div></div></div><div class="card widget" data-type="subscribe-email"><div class="card-content"><div class="menu"><h3 class="menu-label">订阅更新</h3><form action="https://feedburner.google.com/fb/a/mailverify" method="post" target="popupwindow" onsubmit="window.open(&#039;https://feedburner.google.com/fb/a/mailverify?uri=&#039;,&#039;popupwindow&#039;,&#039;scrollbars=yes,width=550,height=520&#039;);return true"><input type="hidden" value="" name="uri"><input type="hidden" name="loc" value="en_US"><div class="field has-addons"><div class="control has-icons-left is-expanded"><input class="input" name="email" type="email" placeholder="Email"><span class="icon is-small is-left"><i class="fas fa-envelope"></i></span></div><div class="control"><input class="button" type="submit" value="订阅"></div></div></form></div></div></div><!--!--><div class="column-right-shadow is-hidden-widescreen"></div></div></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/logo.svg" alt="GaryBlog" height="28"></a><p class="size-small"><span>&copy; 2025 Gary</span>  Powered by <a href="https://hexo.io/" target="_blank">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank">Icarus</a> &amp; <a href="https://github.com/removeif/hexo-theme-amazing" target="_blank">Amazing</a> <br><span>© 版权说明：[本网站所有内容均收集于互联网或自己创作,<br />&nbsp;&nbsp;&nbsp;&nbsp;方便于网友与自己学习交流，如有侵权，请<a href="/message" target="_blank">留言</a>，立即处理]<br /></span><span><span id="statistic-times">loading...</span><script>function createTime(time) {
             var n = new Date(time);
             now.setTime(now.getTime() + 250),
                 days = (now - n) / 1e3 / 60 / 60 / 24,

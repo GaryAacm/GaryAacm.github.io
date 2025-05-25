@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>YOLO原理 - GaryBlog</title><link rel="manifest" href="/manifest.json"><meta name="application-name" content="GaryBlog"><meta name="msapplication-TileImage" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/favicon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="GaryBlog"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="本文主要介绍了YOLO目标检测的结构以及原理"><meta property="og:type" content="blog"><meta property="og:title" content="GaryBlog"><meta property="og:url" content="https://removeif.github.io/"><meta property="og:site_name" content="GaryBlog"><meta property="og:description" content="本文主要介绍了YOLO目标检测的结构以及原理"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/avatar.png"><meta property="article:published_time" content="2025-05-25T00:00:00.000Z"><meta property="article:modified_time" content="2025-05-25T01:49:24.512Z"><meta property="article:author" content="Gary"><meta property="article:tag" content="YOLO"><meta property="article:tag" content="Python·"><meta property="twitter:card" content="summary"><meta property="twitter:image:src" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/avatar.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://garyaacm.github.io/2025/05/25/YOLO%E5%9F%BA%E7%A1%80/"},"headline":"GaryBlog","image":["https://cdn.jsdelivr.net/gh/GaryAacm/image-hosting@main/YOLO.png","https://cdn.jsdelivr.net/gh/GaryAacm/image-hosting@main/FPN.png","https://cdn.jsdelivr.net/gh/GaryAacm/image-hosting@main/RetinaNet.png"],"datePublished":"2025-05-25T00:00:00.000Z","dateModified":"2025-05-25T01:49:24.512Z","author":{"@type":"Person","name":"Gary"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject"}},"description":"本文主要介绍了YOLO目标检测的结构以及原理"}</script><link rel="canonical" href="https://garyaacm.github.io/2025/05/25/YOLO%E5%9F%BA%E7%A1%80/"><link rel="icon" href="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/favicon.png"><meta name="referrer" content="no-referrer-when-downgrade"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/font-awesome/6.0.0/css/all.min.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/highlight.js/11.7.0/styles/atom-one-light.min.css"><link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/font-awesome/5.12.0/css/all.min.css"><link rel="stylesheet" href="https://fonts.loli.net/css?family=Ubuntu:400,600|Source+Code+Pro|Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Microsoft YaHei:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&amp;amp;subset=latin,latin-ext|Inconsolata|Itim|Lobster.css"><script src="https://cdnjs.loli.net/ajax/libs/jquery/3.3.1/jquery.min.js"></script><script src="/js/globalUtils.js"></script><style>body>.footer,body>.navbar,body>.section{opacity:0}</style><!--!--><!--!--><script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" defer></script><!--!--><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/lightgallery/1.10.0/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/justifiedGallery/3.8.1/css/justifiedGallery.min.css"><!--!--><!--!--><!--!--><style>.pace{-webkit-pointer-events:none;pointer-events:none;-webkit-user-select:none;-moz-user-select:none;user-select:none}.pace-inactive{display:none}.pace .pace-progress{background:#3273dc;position:fixed;z-index:2000;top:0;right:100%;width:100%;height:2px}</style><script src="https://cdnjs.loli.net/ajax/libs/pace/1.2.4/pace.min.js"></script><link rel="stylesheet" href="/live2d/waifu.css"><script type="text/javascript" async src="/live2d/autoload.js"></script><!-- hexo injector head_end start --><script>
+  (function () {
+      function switchTab() {
+          if (!location.hash) {
+            return;
+          }
+
+          const id = '#' + CSS.escape(location.hash.substring(1));
+          const $tabMenu = document.querySelector(`.tabs a[href="${id}"]`);
+          if (!$tabMenu) {
+            return;
+          }
+
+          const $tabMenuContainer = $tabMenu.parentElement.parentElement;
+          Array.from($tabMenuContainer.children).forEach($menu => $menu.classList.remove('is-active'));
+          Array.from($tabMenuContainer.querySelectorAll('a'))
+              .map($menu => document.getElementById($menu.getAttribute("href").substring(1)))
+              .forEach($content => $content.classList.add('is-hidden'));
+
+          if ($tabMenu) {
+              $tabMenu.parentElement.classList.add('is-active');
+          }
+          const $activeTab = document.querySelector(id);
+          if ($activeTab) {
+              $activeTab.classList.remove('is-hidden');
+          }
+      }
+      switchTab();
+      window.addEventListener('hashchange', switchTab, false);
+  })();
+  </script><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body class="is-3-column has-navbar-fixed-top"><nav class="navbar navbar-main is-fixed-top"><div class="container navbar-container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/logo.svg" alt="GaryBlog" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">Home</a><a class="navbar-item" href="/archives">Archives</a><a class="navbar-item" href="/categories">Categories</a><a class="navbar-item" href="/tags">Tags</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="noopener" title="Join Gitter" href="https://gitter.im/hexo-theme-amazing/community"><i class="fab fa-gitter"></i></a><a class="navbar-item" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/removeif/hexo-theme-amazing"><i class="fab fa-github"></i></a><a class="navbar-item search" title="搜索" href="javascript:;"><i class="fas fa-search"></i></a><a class="navbar-item" id="night-nav" title="Night Mode" href="javascript:;"><i class="fas fa-moon" id="night-icon"></i></a></div></div></div></nav><script type="text/javascript" src="/js/theme-setting.js"></script><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-8-tablet is-8-desktop is-9-widescreen"><!--!--><div class="card"><article class="card-content article" role="article"><div class="article-meta size-small is-uppercase level is-mobile"><div class="level-left"><i class="far fa-calendar-plus"> </i>2025-05-25  <a class="commentCountImg" href="/2025/05/25/YOLO%E5%9F%BA%E7%A1%80/#comment-container"><span class="display-none-class">ad91925936a12a60b04357096e31b387</span><i class="far fa-comment-dots"></i> <span class="commentCount" id="ad91925936a12a60b04357096e31b387">99+</span>  </a><span class="level-item"><i class="far fa-clock"> </i>16 分钟  <i class="fas fa-pencil-alt"> </i>2.4 k</span><span class="level-item" id="busuanzi_container_page_pv"><span id="busuanzi_value_page_pv">0</span>次访问</span></div></div><h1 class="title is-3 is-size-4-mobile">YOLO原理</h1><div class="content"><blockquote>
+<p>本文主要介绍了YOLO目标检测的结构以及原理</p>
+</blockquote>
+<span id="more"></span>
+
+<h1 id="YOLO目标检测"><a href="#YOLO目标检测" class="headerlink" title="YOLO目标检测"></a>YOLO目标检测</h1><h2 id="YOLO目标检测的目的："><a href="#YOLO目标检测的目的：" class="headerlink" title="YOLO目标检测的目的："></a>YOLO目标检测的目的：</h2><p><strong>给定一张图片或者一帧视频，设计好模型定位图片中我们感兴趣的物体，同时标注其所属类别</strong></p>
+<h2 id="目标检测的原理和算法："><a href="#目标检测的原理和算法：" class="headerlink" title="目标检测的原理和算法："></a>目标检测的原理和算法：</h2><p><img src="https://cdn.jsdelivr.net/gh/GaryAacm/image-hosting@main/YOLO.png"></p>
+<h3 id="目标检测基本框架："><a href="#目标检测基本框架：" class="headerlink" title="目标检测基本框架："></a>目标检测基本框架：</h3><p><strong>Backbone network</strong>: 主干网络，实现从图像检测中提取出必要的特征信息，然后利用特征去实现定位和分类。</p>
+<hr>
+<h2 id="常见主干网络模型"><a href="#常见主干网络模型" class="headerlink" title="常见主干网络模型"></a>常见主干网络模型</h2><table>
+<thead>
+<tr>
+<th>网络名</th>
+<th>特点</th>
+<th>用途示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>VGG</td>
+<td>堆叠简单卷积层，结构规则</td>
+<td>早期检测器（如 SSD）</td>
+</tr>
+<tr>
+<td>ResNet</td>
+<td>引入残差连接，解决深层退化问题</td>
+<td>Faster R-CNN, Mask R-CNN</td>
+</tr>
+<tr>
+<td>MobileNet</td>
+<td>深度可分离卷积，轻量高效</td>
+<td>适用于移动端模型部署</td>
+</tr>
+<tr>
+<td>EfficientNet</td>
+<td>复合缩放策略，精度与效率均衡</td>
+<td>轻量检测器如 YOLOv7-tiny</td>
+</tr>
+<tr>
+<td>DenseNet</td>
+<td>层间全连接，特征复用强</td>
+<td>特征提取、语义分割任务</td>
+</tr>
+<tr>
+<td>CSPNet</td>
+<td>改进的梯度流与参数分离策略</td>
+<td>YOLOv4&#x2F;v5&#x2F;YOLOv8 主干</td>
+</tr>
+<tr>
+<td>Swin Transformer</td>
+<td>视觉Transformer结构，支持长程建模</td>
+<td>最新版本检测器（如 DINO）</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="关于ResNet"><a href="#关于ResNet" class="headerlink" title="关于ResNet"></a>关于ResNet</h2><h3 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h3><p>在深度学习中，随着网络层数的加深，模型表现并不总是提升，反而可能出现<strong>退化问题</strong>——更深的网络训练误差反而更高。为了解决这一问题，微软研究院于 2015 年提出了 <strong>ResNet（Residual Network）</strong>，成为深度网络设计的里程碑。</p>
+<hr>
+<h2 id="ResNet-的核心思想：残差连接"><a href="#ResNet-的核心思想：残差连接" class="headerlink" title="ResNet 的核心思想：残差连接"></a>ResNet 的核心思想：残差连接</h2><p>传统卷积网络学习的是：</p>
+<p>$$<br>y &#x3D; \mathcal{F}(x)<br>$$</p>
+<p>ResNet 则改为学习：</p>
+<p>$$<br>y &#x3D; \mathcal{F}(x) + x<br>$$</p>
+<p>其中：</p>
+<ul>
+<li>( x )：输入特征</li>
+<li>$$( \mathcal{F}(x) )$$ 残差映射（通常是若干层卷积）</li>
+<li>$$( x + \mathcal{F}(x) )$$ 称为<strong>残差连接</strong>或<strong>跳跃连接（skip connection）</strong></li>
+</ul>
+<p>这种结构允许信息直接“跳过”卷积层，缓解梯度消失、退化等问题。</p>
+<hr>
+<h2 id="ResNet-的基本模块：残差块（Residual-Block）"><a href="#ResNet-的基本模块：残差块（Residual-Block）" class="headerlink" title="ResNet 的基本模块：残差块（Residual Block）"></a>ResNet 的基本模块：残差块（Residual Block）</h2><h3 id="标准残差块结构如下图所示："><a href="#标准残差块结构如下图所示：" class="headerlink" title="标准残差块结构如下图所示："></a>标准残差块结构如下图所示：</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Input</span><br><span class="line">  │</span><br><span class="line">  ├───► Conv → BN → ReLU → Conv → BN ───┐</span><br><span class="line">  │                                      │</span><br><span class="line">  └──────────────────► Elementwise Add ──► ReLU</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>Neck Network</strong>（颈部网络）位于检测模型的 Backbone（主干网络）与 Head（检测头）之间，是连接提取与预测的桥梁。</p>
+<p>其主要作用是：</p>
+<ul>
+<li><strong>多尺度特征融合</strong>：整合来自不同层次的语义和空间信息；</li>
+<li><strong>增强上下文感知能力</strong>：提升模型对大物体、小物体的识别能力；</li>
+<li><strong>信息传导通路</strong>：为后续分类与定位提供统一格式的特征张量。</li>
+</ul>
+<hr>
+<h3 id="为什么需要-Neck？"><a href="#为什么需要-Neck？" class="headerlink" title="为什么需要 Neck？"></a>为什么需要 Neck？</h3><p>主干网络输出的特征通常存在分辨率差异：</p>
+<ul>
+<li>高层特征：语义强但空间分辨率低（适合识别整体类别）；</li>
+<li>低层特征：空间精度高但语义弱（适合定位边缘或小目标）；</li>
+</ul>
+<p><strong>Neck 的任务</strong>就是将这些不同层级的特征进行融合与传递，使得检测头可以“既懂语义，又知细节”。</p>
+<hr>
+<h3 id="常见-Neck-结构对比"><a href="#常见-Neck-结构对比" class="headerlink" title="常见 Neck 结构对比"></a>常见 Neck 结构对比</h3><table>
+<thead>
+<tr>
+<th>结构</th>
+<th>全称</th>
+<th>特点说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FPN</td>
+<td>Feature Pyramid Network</td>
+<td>自顶向下特征融合，提升小目标检测能力</td>
+</tr>
+<tr>
+<td>PANet</td>
+<td>Path Aggregation Network</td>
+<td>引入自底向上路径，增强位置敏感特征</td>
+</tr>
+<tr>
+<td>BiFPN</td>
+<td>Bidirectional Feature Pyramid</td>
+<td>双向融合 + 加权特征选择，用于高效检测</td>
+</tr>
+<tr>
+<td>YOLO-Nano Neck</td>
+<td>C2f + SPPF + upsample&#x2F;concat</td>
+<td>YOLOv8 使用轻量结构实现高效上下文建模</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="关于FPN-："><a href="#关于FPN-：" class="headerlink" title="关于FPN ："></a>关于FPN ：</h3><p><img src="https://cdn.jsdelivr.net/gh/GaryAacm/image-hosting@main/FPN.png"></p>
+<p><strong>FPN就是在检测之前，先将多个尺度的特征图进行一次buttom-up的融合</strong></p>
+<h3 id="FPN-的工作流程包括三个步骤："><a href="#FPN-的工作流程包括三个步骤：" class="headerlink" title="FPN 的工作流程包括三个步骤："></a>FPN 的工作流程包括三个步骤：</h3><ol>
+<li><p><strong>Bottom-up（从低到高）路径</strong>：</p>
+<ul>
+<li>由主干网络（如 ResNet）生成多层级特征图 $$( C_2, C_3, C_4, C_5 )$$</li>
+<li>特征越往上越抽象、越语义化。</li>
+</ul>
+</li>
+<li><p><strong>Top-down（从高到低）路径</strong>：</p>
+<ul>
+<li>从顶层特征开始，逐层进行上采样(放大图像)（如 nearest 或 bilinear）；</li>
+<li>每一级都与相应的 bottom-up 特征图横向连接（1×1卷积后相加）；</li>
+<li>实现语义信息的向下传递。</li>
+</ul>
+</li>
+<li><p><strong>横向连接（Lateral connections）</strong>：</p>
+<ul>
+<li>在每一层使用卷积对底层特征进行通道变换；</li>
+<li>与上采样后的高层语义特征相加，完成融合。</li>
+</ul>
+</li>
+</ol>
+<p>融合后的特征图记为 ( P_2, P_3, P_4, P_5 )，每个尺度都具备了<strong>丰富语义 + 精细结构</strong>，非常适合目标检测中的多尺度预测任务。</p>
+<hr>
+<h3 id="应用场景"><a href="#应用场景" class="headerlink" title="应用场景"></a>应用场景</h3><ul>
+<li>小目标检测（提升显著）</li>
+<li>多尺度目标检测（如 RetinaNet、Mask R-CNN）</li>
+<li>YOLO 系列中也借鉴 FPN 原理构建 Neck（如 PANet）</li>
+</ul>
+<hr>
+<h2 id="关于SPP（Spatial-Pyramid-Pooling）空间金字塔池化"><a href="#关于SPP（Spatial-Pyramid-Pooling）空间金字塔池化" class="headerlink" title="关于SPP（Spatial Pyramid Pooling）空间金字塔池化"></a>关于SPP（Spatial Pyramid Pooling）空间金字塔池化</h2><p><strong>SPP（空间金字塔池化）</strong> 是一种用于增强神经网络感受野的结构，最早应用于图像分类任务中，后来在 <strong>YOLOv3~YOLOv5</strong> 等目标检测模型中广泛使用。</p>
+<p>它的目标是：<strong>在不改变输入尺寸的前提下，提取多尺度空间信息并融合</strong>，从而提升模型对不同大小目标的识别能力。</p>
+<hr>
+<h3 id="为什么需要-SPP？"><a href="#为什么需要-SPP？" class="headerlink" title="为什么需要 SPP？"></a>为什么需要 SPP？</h3><p>传统的卷积 + 池化结构只能捕捉<strong>固定尺度的局部信息</strong>，但目标可能有不同的形状和大小，SPP 提供了一种<strong>多尺度上下文建模方式</strong>：</p>
+<ul>
+<li>小池化核：捕捉局部精细结构；</li>
+<li>大池化核：感知全局上下文区域。</li>
+</ul>
+<p>通过多尺度池化输出连接，模型能同时理解图像的<strong>局部细节和整体语义</strong>。</p>
+<hr>
+<h3 id="SPP-工作原理"><a href="#SPP-工作原理" class="headerlink" title="SPP 工作原理"></a>SPP 工作原理</h3><p>SPP 模块会在一张特征图上，<strong>并行使用多个不同大小的池化核（如 5×5、9×9、13×13）</strong>，然后将它们的输出与原始特征图进行 <strong>拼接（concat）</strong>。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">       输入特征图</span><br><span class="line">           │</span><br><span class="line"> ┌─────────┼────────────┐</span><br><span class="line"> │         │            │</span><br><span class="line">5×5池化   9×9池化     13×13池化</span><br><span class="line"> │         │            │</span><br><span class="line"> └────┬────┴─────┬──────┘</span><br><span class="line">      ↓          ↓</span><br><span class="line">   通道拼接（concat）</span><br><span class="line">           ↓</span><br><span class="line">        输出特征图</span><br></pre></td></tr></table></figure>
+
+<h2 id="池化（Pooling）操作详解"><a href="#池化（Pooling）操作详解" class="headerlink" title="池化（Pooling）操作详解"></a>池化（Pooling）操作详解</h2><p>在卷积神经网络（CNN）中，<strong>池化（Pooling）</strong> 是一种用于<strong>降低特征图空间维度</strong>的操作，能够压缩信息、减少计算量，并提升模型的<strong>平移不变性</strong>和<strong>鲁棒性</strong>。</p>
+<hr>
+<h3 id="1-池化的作用"><a href="#1-池化的作用" class="headerlink" title="1. 池化的作用"></a>1. 池化的作用</h3><ul>
+<li><strong>降低特征图尺寸</strong>（减少内存占用与计算负担）</li>
+<li><strong>提取主干特征</strong>（保留最显著的响应）</li>
+<li><strong>增强局部不变性</strong>（使模型对位置偏移更鲁棒）</li>
+<li><strong>防止过拟合</strong>（通过信息压缩减少冗余）</li>
+</ul>
+<hr>
+<h3 id="2-常见池化类型"><a href="#2-常见池化类型" class="headerlink" title="2. 常见池化类型"></a>2. 常见池化类型</h3><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>最大池化</strong>（Max Pooling）</td>
+<td>每个滑动窗口中取最大值</td>
+</tr>
+<tr>
+<td><strong>平均池化</strong>（Average Pooling）</td>
+<td>每个窗口取平均值</td>
+</tr>
+<tr>
+<td><strong>全局平均池化</strong>（Global Average Pooling）</td>
+<td>整个特征图平均，变为一个数</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="3-池化操作示意"><a href="#3-池化操作示意" class="headerlink" title="3. 池化操作示意"></a>3. 池化操作示意</h3><p>以 2×2 最大池化为例：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">输入特征图（4×4）：</span><br><span class="line">[[1, 3, 2, 1],</span><br><span class="line"> [4, 6, 5, 2],</span><br><span class="line"> [1, 0, 2, 4],</span><br><span class="line"> [3, 2, 1, 5]]</span><br><span class="line"></span><br><span class="line">→ 使用 2×2 滑动窗口 + 步长 2</span><br><span class="line"></span><br><span class="line">输出特征图（2×2）：</span><br><span class="line">[[6, 5],</span><br><span class="line"> [3, 5]]</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h2 id="Detection-Head：负责定位与检测"><a href="#Detection-Head：负责定位与检测" class="headerlink" title="Detection Head：负责定位与检测"></a>Detection Head：负责定位与检测</h2><p><strong>Detection Head（检测头）</strong> 是目标检测模型中最终完成预测的模块，接收来自 Backbone + Neck 网络融合后的多尺度特征图，输出每个位置上的分类结果和回归坐标。</p>
+<hr>
+<h3 id="检测头的作用"><a href="#检测头的作用" class="headerlink" title="检测头的作用"></a>检测头的作用</h3><p>检测头对特征图进行卷积，目的是从每个位置提取<strong>该位置是否存在目标、目标属于哪类、目标框的位置</strong>这些局部感知信息。</p>
+<ul>
+<li><strong>分类分支</strong>：判断该位置上属于哪个类别（或是否为前景）；</li>
+<li><strong>回归分支</strong>：预测边界框的位置参数（通常是中心坐标 + 宽高，或偏移量形式）；</li>
+<li>通常每个尺度特征图都单独接一个检测头，<strong>多尺度检测</strong>能力来源于此。</li>
+</ul>
+<hr>
+<h3 id="结构特点"><a href="#结构特点" class="headerlink" title="结构特点"></a>结构特点</h3><p>检测头通常非常简单，主要由<strong>几层小卷积 + 输出层</strong>构成：</p>
+<ul>
+<li>不需要复杂结构；</li>
+<li>不进行特征提取，仅负责最终<strong>特征转输出</strong>；</li>
+<li>通常是轻量的，参数占比不大，但作用关键。</li>
+</ul>
+<p><strong>检测头本质上就是在每一个特征图位置上卷积滑窗计算分类和回归输出。它结构简单，执行高效，但承担着模型预测的全部核心逻辑。</strong></p>
+<hr>
+<h3 id="RetinaNet-中的检测头示意"><a href="#RetinaNet-中的检测头示意" class="headerlink" title="RetinaNet 中的检测头示意"></a>RetinaNet 中的检测头示意</h3><p><img src="https://cdn.jsdelivr.net/gh/GaryAacm/image-hosting@main/RetinaNet.png"></p>
+<p>在 RetinaNet 中：</p>
+<ul>
+<li>每个 FPN 层输出的特征图都接两个独立分支：<ul>
+<li>一个分类头（Class Head）：多个 3×3 卷积 + sigmoid 输出</li>
+<li>一个回归头（Box Head）：多个 3×3 卷积 + 边界框输出</li>
+</ul>
+</li>
+</ul>
+<p>两者结构相似，但参数不共享，各自独立优化。</p>
+<hr>
+</div><div class="article-licensing box"><div class="licensing-title"><p>YOLO原理</p><p><a href="https://garyaacm.github.io/2025/05/25/YOLO基础/">https://garyaacm.github.io/2025/05/25/YOLO基础/</a></p></div><div class="licensing-meta level is-mobile"><div class="level-left"><div class="level-item is-narrow"><div><h6>作者</h6><a href="https://GaryAacm.github.io"><p>Gary</p></a></div></div><div class="level-item is-narrow"><div><h6>发布于</h6><p>2025-05-25</p></div></div><div class="level-item is-narrow"><div><h6>更新于</h6><p>2025-05-25</p></div></div><div class="level-item is-narrow"><div><h6>许可协议</h6><p><a class="icon" rel="noopener" target="_blank" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a><a class="icon" rel="noopener" target="_blank" title="Attribution" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a><a class="icon" rel="noopener" target="_blank" title="Noncommercial" href="https://creativecommons.org/licenses/by-nc/4.0/"><i class="fab fa-creative-commons-nc"></i></a></p></div></div></div></div></div><div class="recommend-area"><div class="recommend-post"><span class="is-size-6 has-text-grey has-mr-7"># 相关文章</span><br><span>  1.<a class="is-size-6" href="/2025/05/20/Maching_Learning(2)/" target="_blank">机器学习一些进阶知识</a><br></span><span>  2.<a class="is-size-6" href="/2025/05/19/TensorRT%E5%9F%BA%E7%A1%80/" target="_blank">tensorRT基础操作</a><br></span><span>  3.<a class="is-size-6" href="/2025/05/19/cuda%E5%9F%BA%E7%A1%80/" target="_blank">Cuda基础操作</a><br></span><span>  4.<a class="is-size-6" href="/2025/05/19/%E7%BD%91%E7%BB%9C%E9%80%9A%E4%BF%A1%E9%97%AE%E9%A2%98/" target="_blank">MQTT 与 HTTP 通信协议对比及项目应用场景选择</a><br></span><span>  5.<a class="is-size-6" href="/2025/05/18/Machine_Learning(1)/" target="_blank">机器学习基础知识总结</a><br></span><span>  6.<a class="is-size-6" href="/2025/05/17/Plan/" target="_blank">关于个人发展的规划</a><br></span><span>  7.<a class="is-size-6" href="/2025/05/17/%E5%85%B3%E4%BA%8Ethread%E7%BA%BF%E7%A8%8B%E5%92%8CPOSIX%E7%9A%84%E5%BA%94%E7%94%A8/" target="_blank">关于 thread 线程和 POSIX 的应用</a><br></span><span>  8.<a class="is-size-6" href="/2024/12/05/Linux%E4%B8%8B%E7%9A%84QT%E8%AE%BE%E8%AE%A1/" target="_blank">利用 qmake 构建 Qt 项目与开发过程细节说明</a><br></span></div></div><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/social-share.js/1.0.16/css/share.min.css"><div class="social-share"></div><script src="https://cdnjs.loli.net/ajax/libs/social-share.js/1.0.16/js/social-share.min.js"></script></article></div><!--!--><nav class="post-navigation mt-4 level is-mobile"><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2025/05/20/Maching_Learning(2)/"><span class="level-item">机器学习一些进阶知识</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><!--!--><div class="card"><div class="card-content"><div class="title is-5">评论</div><div id="comment-container"></div><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/gitalk/1.6.0/gitalk.css"><script> $.getScript('/js/gitalk.min.js', function () { 
+            var gitalk = new Gitalk({
+            language:'zh-CN',
+            id: 'ad91925936a12a60b04357096e31b387',
+            repo: 'blog_comment',
+            owner: 'Gray',
+            clientID: '46a9f3481b46ea0129d8',
+            clientSecret: '79c7c9cb847e141757d7864453bcbf89f0655b24',
+            admin: ["removeif"],
+            createIssueManually: true,
+            distractionFreeMode: false,
+            perPage: 10,
+            pagerDirection: 'last',
+            proxy: 'https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token',
+            
+            enableHotKey: true,
+            isLocked: false
+        })
+        gitalk.render('comment-container')});</script></div></div></div><div class="column column-left is-4-tablet is-4-desktop is-3-widescreen  order-1 is-sticky"><!--!--><div class="card widget" data-type="profile"><div class="card-content"><nav class="level"><div class="level-item has-text-centered flex-shrink-1"><div><figure class="image is-128x128 mx-auto mb-2"><img class="avatar is-rounded" src="https://cdn.jsdelivr.net/gh/GaryAacm/image-hosting@main/bg.jpg" alt="Gary"></figure><p class="title is-size-4 is-block" style="line-height:inherit;">Gary</p><p class="is-size-6 is-block">天下万般兵刃，唯有过往伤人最深</p><p class="is-size-6 is-flex justify-content-center"><i class="fas fa-map-marker-alt mr-1"></i><span>中国</span></p></div></div></nav><nav class="level is-mobile"><div class="level-item has-text-centered is-marginless"><div><p class="heading">文章</p><a href="/archives/"><p class="title">12</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">分类</p><a href="/categories/"><p class="title">3</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">标签</p><a href="/tags/"><p class="title">26</p></a></div></div></nav><div class="level"><a class="level-item button is-primary is-rounded" href="https://github.com/GaryAacm" target="_blank" rel="noopener">关注我</a></div><div class="level is-mobile"><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="Github" href="https://github.com/GaryAacm"><i class="fab fa-github"></i></a><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="RSS" href="/atom.xml"><i class="fas fa-rss"></i></a></div><div><hr><p id="hitokoto">:D 一言句子获取中...</p><script type="text/javascript" defer>function getYiyan(){
+                                $.getJSON("https://v1.hitokoto.cn/", function (data) {
+                                if(data){
+                                    $('#hitokoto').html("");
+                                    $('#hitokoto').append("<strong style='color: #3273dc;'>"+data.hitokoto+"</strong>"+
+                                    "<p>"+"来源《"+data.from+"》</p><p>提供者-"+data.creator+"</p>");
+                                }});}
+                                $(function (){getYiyan();$('#hitokoto').click(function(){getYiyan();})});</script></div></div></div><div class="card widget" data-type="links"><div class="card-content"><div class="menu"><h3 class="menu-label">链接</h3><ul class="menu-list"><li><a class="level is-mobile" href="https://hexo.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Hexo</span></span><span class="level-right"><span class="level-item tag">hexo.io</span></span></a></li><li><a class="level is-mobile" href="https://bulma.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Bulma</span></span><span class="level-right"><span class="level-item tag">bulma.io</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新评论</h3><span class="body_hot_comment">加载中，最新评论有1分钟缓存...</span></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新文章</h3><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-25T00:00:00.000Z">2025-05-25</time></p><p class="title"><a href="/2025/05/25/YOLO%E5%9F%BA%E7%A1%80/">YOLO原理</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-20T01:01:00.000Z">2025-05-20</time></p><p class="title"><a href="/2025/05/20/Maching_Learning(2)/">机器学习一些进阶知识</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-19T12:00:00.000Z">2025-05-19</time></p><p class="title"><a href="/2025/05/19/TensorRT%E5%9F%BA%E7%A1%80/">tensorRT基础操作</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-19T07:00:00.000Z">2025-05-19</time></p><p class="title"><a href="/2025/05/19/cuda%E5%9F%BA%E7%A1%80/">Cuda基础操作</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-05-18T16:10:00.000Z">2025-05-19</time></p><p class="title"><a href="/2025/05/19/%E7%BD%91%E7%BB%9C%E9%80%9A%E4%BF%A1%E9%97%AE%E9%A2%98/">MQTT 与 HTTP 通信协议对比及项目应用场景选择</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">分类</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BB%8B%E7%BB%8D/"><span class="level-start"><span class="level-item">个人介绍</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/"><span class="level-start"><span class="level-item">技术分享</span></span><span class="level-end"><span class="level-item tag">10</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E6%95%99%E7%A8%8B/"><span class="level-start"><span class="level-item">教程</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">归档</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/archives/2025/05/"><span class="level-start"><span class="level-item">五月 2025</span></span><span class="level-end"><span class="level-item tag">10</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2024/12/"><span class="level-start"><span class="level-item">十二月 2024</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2024/11/"><span class="level-start"><span class="level-item">十一月 2024</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">标签</h3><div class="field is-grouped is-grouped-multiline"><div class="control"><a class="tags has-addons" href="/tags/C/"><span class="tag">C++</span><span class="tag is-grey-lightest">3</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%BC%80%E5%8F%91/"><span class="tag">嵌入式开发</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"><span class="tag">机器学习</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/API/"><span class="tag">API</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/C-C/"><span class="tag">C++C</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/GPU/"><span class="tag">GPU</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Git/"><span class="tag">Git</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/HTTP/"><span class="tag">HTTP</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Hexo/"><span class="tag">Hexo</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/I2C/"><span class="tag">I2C</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Linux/"><span class="tag">Linux</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/MAX30102/"><span class="tag">MAX30102</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/MQTT/"><span class="tag">MQTT</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/POSIX/"><span class="tag">POSIX</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Python/"><span class="tag">Python</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Python%C2%B7/"><span class="tag">Python·</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/QThread/"><span class="tag">QThread</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Qt/"><span class="tag">Qt</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/YOLO/"><span class="tag">YOLO</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/cuda/"><span class="tag">cuda</span><span class="tag is-grey-lightest">1</span></a></div></div><div class="field is-grouped is-grouped-multiline"><a class="tags has-addons" href="/tags/"><span class="tag">查看全部&gt;&gt;</span></a></div></div></div></div><div class="card widget" data-type="subscribe-email"><div class="card-content"><div class="menu"><h3 class="menu-label">订阅更新</h3><form action="https://feedburner.google.com/fb/a/mailverify" method="post" target="popupwindow" onsubmit="window.open(&#039;https://feedburner.google.com/fb/a/mailverify?uri=&#039;,&#039;popupwindow&#039;,&#039;scrollbars=yes,width=550,height=520&#039;);return true"><input type="hidden" value="" name="uri"><input type="hidden" name="loc" value="en_US"><div class="field has-addons"><div class="control has-icons-left is-expanded"><input class="input" name="email" type="email" placeholder="Email"><span class="icon is-small is-left"><i class="fas fa-envelope"></i></span></div><div class="control"><input class="button" type="submit" value="订阅"></div></div></form></div></div></div><!--!--><div class="column-right-shadow is-hidden-widescreen"></div></div></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/logo.svg" alt="GaryBlog" height="28"></a><p class="size-small"><span>&copy; 2025 Gary</span>  Powered by <a href="https://hexo.io/" target="_blank">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank">Icarus</a> &amp; <a href="https://github.com/removeif/hexo-theme-amazing" target="_blank">Amazing</a> <br><span>© 版权说明：[本网站所有内容均收集于互联网或自己创作,<br />&nbsp;&nbsp;&nbsp;&nbsp;方便于网友与自己学习交流，如有侵权，请<a href="/message" target="_blank">留言</a>，立即处理]<br /></span><span><span id="statistic-times">loading...</span><script>function createTime(time) {
+            var n = new Date(time);
+            now.setTime(now.getTime() + 250),
+                days = (now - n) / 1e3 / 60 / 60 / 24,
+                dnum = Math.floor(days),
+                hours = (now - n) / 1e3 / 60 / 60 - 24 * dnum,
+                hnum = Math.floor(hours),
+            1 == String(hnum).length && (hnum = "0" + hnum),
+                minutes = (now - n) / 1e3 / 60 - 1440 * dnum - 60 * hnum,
+                mnum = Math.floor(minutes),
+            1 == String(mnum).length && (mnum = "0" + mnum),
+                seconds = (now - n) / 1e3 - 86400 * dnum - 3600 * hnum - 60 * mnum,
+                snum = Math.round(seconds),
+            1 == String(snum).length && (snum = "0" + snum),
+                document.getElementById("statistic-times").innerHTML = "❤️本站自 <strong>"+time.split(" ")[0].replace(/\//g,".")+"</strong> 已运行 <strong>" + dnum + "</strong> 天 <strong>" + hnum + "</strong> 小时 <strong>" + mnum + "</strong> 分 <strong>" + snum + "</strong> 秒！❤️";
+        }var now = new Date();setInterval("createTime('2025/05/15 00:00:00')", 250,"");</script><br></span><div class="size-small"><span>❤️感谢 <strong><span id="busuanzi_value_site_uv">99+</span></strong> 小伙伴的 <strong><span id="busuanzi_value_site_pv">99+</span></strong> 次光临！❤️</span></div></p></div><div class="level-end"><div class="field has-addons"><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/removeif/hexo-theme-amazing"><i class="fab fa-github"></i></a></p></div><div class="sideMusic"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="/js/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/npm/meting@2/dist/Meting.min.js"></script><meting-js style="width: auto;height: 2000px;" server="netease" type="playlist" id="2364053447" theme="#2980b9" loop="all" autoplay="false" order="list" storageName="aplayer-setting" lrctype="0" list-max-height="400px" fixed="true"></meting-js></div></div></div></div></footer><script src="https://cdnjs.loli.net/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script><script src="https://cdnjs.loli.net/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" async></script><script>moment.locale("zh-cn");</script><script>var IcarusThemeSettings = {
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="/js/column.js"></script><script src="/js/animation.js"></script><a id="back-to-top" title="回到顶端" href="javascript:;"><i class="fas fa-chevron-up"></i></a><script src="/js/back_to_top.js" defer></script><!--!--><!--!--><!--!--><script src="https://cdnjs.loli.net/ajax/libs/lightgallery/1.10.0/js/lightgallery.min.js" defer></script><script src="https://cdnjs.loli.net/ajax/libs/justifiedGallery/3.8.1/js/jquery.justifiedGallery.min.js" defer></script><script>window.addEventListener("load", () => {
+            if (typeof $.fn.lightGallery === 'function') {
+                $('.article').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof $.fn.justifiedGallery === 'function') {
+                if ($('.justified-gallery > p > .gallery-item').length) {
+                    $('.justified-gallery > p > .gallery-item').unwrap();
+                }
+                $('.justified-gallery').justifiedGallery();
+            }
+        });</script><!--!--><!--!--><script type="text/javascript" id="MathJax-script" async>MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']]
+      },
+      svg: {
+        fontCache: 'global'
+      },
+      chtml: {
+        matchFontHeight: false
+      }
+    };</script><script src="https://cdnjs.loli.net/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script><!--!--><script src="/js/main.js" defer></script><script>$.getScript('/js/comment-issue-data.js',function(){loadIssueData('46a9f3481b46ea0129d8','79c7c9cb847e141757d7864453bcbf89f0655b24','Gray','blog_comment',false);})</script><div class="searchbox"><div class="searchbox-container"><div class="searchbox-header"><div class="searchbox-input-container"><input class="searchbox-input" type="text" placeholder="想要查找什么..."></div><a class="searchbox-close" href="javascript:;">×</a></div><div class="searchbox-body"></div></div></div><script data-pjax src="/js/insight.js" defer></script><script data-pjax>document.addEventListener('DOMContentLoaded', function () {
+            loadInsight({"contentUrl":"/content.json"}, {"hint":"想要查找什么...","untitled":"(无标题)","posts":"文章","pages":"页面","categories":"分类","tags":"标签"});
+        });</script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.js"></script><script type="text/javascript">var pjax = new Pjax({
+            elements: "a",//代表点击链接就更新
+            selectors: [  //代表要更新的节点
+                ".section",
+                "title"
+            ],
+            cache: true,
+            cacheBust:false
+        })
+
+        function loadBusuanzi(){
+        $.getScript("//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js", function () {});
+        }
+
+        function loadMathJax() { //加载mathjax
+            $.getScript("//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML", function () {
+                MathJax.Hub.Config({ tex2jax: { inlineMath: [['$', '$'], ['\(', '\)']] } });
+                var math = document.getElementsByClassName("entry-content")[0];
+                MathJax.Hub.Queue(["Typeset", MathJax.Hub, math]);
+            });
+        };
+
+        // 开始 PJAX 执行的函数
+        document.addEventListener('pjax:send', function () {
+        });
+        
+        // PJAX 完成之后执行的函数，可以和上面的重载放在一起
+        document.addEventListener('pjax:complete', function () {
+            $(".section").css({opacity:1});
+            if(true){
+                $.getScript('/js/comment-issue-data.js',function(){loadIssueData('46a9f3481b46ea0129d8','79c7c9cb847e141757d7864453bcbf89f0655b24','Gray','blog_comment',false);});
+            }
+            if(false){
+                loadMathJax();
+            }
+            loadMainJs(jQuery, window.moment, window.ClipboardJS, window.IcarusThemeSettings);
+            loadBackTop();
+            loadBusuanzi();
+            if(typeof loadBanner == 'function'){
+                loadBanner();
+            }
+        });</script></body></html>

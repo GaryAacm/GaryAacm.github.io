@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>从自我改进智能体到 Harness 工程：Recursive Self-Improving Agent 调研 - GaryBlog</title><link rel="manifest" href="/manifest.json"><meta name="application-name" content="GaryBlog"><meta name="msapplication-TileImage" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/favicon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="GaryBlog"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="本文整理自《Paper Survey》演示文稿，讨论递归自我改进智能体（Recursive Self-Improving Agent，RSI）、典型自我改进 Harness，以及编码智能体的 Harness 工程。文中涉及论文版本、引用量和开源项目数据均来自原始调研材料，发布前建议再核对其最新元数据。"><meta property="og:type" content="blog"><meta property="og:title" content="GaryBlog"><meta property="og:url" content="https://removeif.github.io/"><meta property="og:site_name" content="GaryBlog"><meta property="og:description" content="本文整理自《Paper Survey》演示文稿，讨论递归自我改进智能体（Recursive Self-Improving Agent，RSI）、典型自我改进 Harness，以及编码智能体的 Harness 工程。文中涉及论文版本、引用量和开源项目数据均来自原始调研材料，发布前建议再核对其最新元数据。"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/avatar.png"><meta property="article:published_time" content="2026-09-09T15:20:00.000Z"><meta property="article:modified_time" content="2026-09-09T15:30:24.544Z"><meta property="article:author" content="Gary"><meta property="article:tag" content="LLM Agent"><meta property="article:tag" content="Recursive Self-Improvement"><meta property="article:tag" content="Agent Harness"><meta property="article:tag" content="Self-Improving Agent"><meta property="twitter:card" content="summary"><meta property="twitter:image:src" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/avatar.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://garyaacm.github.io/2026/09/09/Paper_Survey/"},"headline":"GaryBlog","image":["https://garyaacm.github.io/images/Paper_Survey/rsi-overview.png","https://garyaacm.github.io/images/Paper_Survey/rsi-taxonomy.png","https://garyaacm.github.io/images/Paper_Survey/harness-self-improvement.png","https://garyaacm.github.io/images/Paper_Survey/self-referential-modification.png","https://garyaacm.github.io/images/Paper_Survey/data-system-loop.png","https://garyaacm.github.io/images/Paper_Survey/trainer-self-improvement.png","https://garyaacm.github.io/images/Paper_Survey/darwin-godel-machine.png","https://garyaacm.github.io/images/Paper_Survey/prime-agent-architecture.png","https://garyaacm.github.io/images/Paper_Survey/continual-harness.png","https://garyaacm.github.io/images/Paper_Survey/prime-agent-result-1.png","https://garyaacm.github.io/images/Paper_Survey/prime-agent-result-2.png","https://garyaacm.github.io/images/Paper_Survey/prime-agent-result-3.png","https://garyaacm.github.io/images/Paper_Survey/prime-agent-result-4.png","https://garyaacm.github.io/images/Paper_Survey/agent-loop-comparison.png","https://garyaacm.github.io/images/Paper_Survey/context-management.png","https://garyaacm.github.io/images/Paper_Survey/codex-safety.png","https://garyaacm.github.io/images/Paper_Survey/orchestration.png","https://garyaacm.github.io/images/Paper_Survey/evo-bench.png"],"datePublished":"2026-09-09T15:20:00.000Z","dateModified":"2026-09-09T15:30:24.544Z","author":{"@type":"Person","name":"Gary"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject"}},"description":"本文整理自《Paper Survey》演示文稿，讨论递归自我改进智能体（Recursive Self-Improving Agent，RSI）、典型自我改进 Harness，以及编码智能体的 Harness 工程。文中涉及论文版本、引用量和开源项目数据均来自原始调研材料，发布前建议再核对其最新元数据。"}</script><link rel="canonical" href="https://garyaacm.github.io/2026/09/09/Paper_Survey/"><link rel="icon" href="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/favicon.png"><meta name="referrer" content="no-referrer-when-downgrade"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/font-awesome/6.0.0/css/all.min.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/highlight.js/11.7.0/styles/atom-one-light.min.css"><link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/font-awesome/5.12.0/css/all.min.css"><link rel="stylesheet" href="https://fonts.loli.net/css?family=Ubuntu:400,600|Source+Code+Pro|Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Microsoft YaHei:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&amp;amp;subset=latin,latin-ext|Inconsolata|Itim|Lobster.css"><script src="https://cdnjs.loli.net/ajax/libs/jquery/3.3.1/jquery.min.js"></script><script src="/js/globalUtils.js"></script><style>body>.footer,body>.navbar,body>.section{opacity:0}</style><!--!--><!--!--><script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" defer></script><!--!--><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/lightgallery/1.10.0/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/justifiedGallery/3.8.1/css/justifiedGallery.min.css"><!--!--><!--!--><!--!--><style>.pace{-webkit-pointer-events:none;pointer-events:none;-webkit-user-select:none;-moz-user-select:none;user-select:none}.pace-inactive{display:none}.pace .pace-progress{background:#3273dc;position:fixed;z-index:2000;top:0;right:100%;width:100%;height:2px}</style><script src="https://cdnjs.loli.net/ajax/libs/pace/1.2.4/pace.min.js"></script><link rel="stylesheet" href="/live2d/waifu.css"><script type="text/javascript" async src="/live2d/autoload.js"></script><!-- hexo injector head_end start --><script>
+  (function () {
+      function switchTab() {
+          if (!location.hash) {
+            return;
+          }
+
+          const id = '#' + CSS.escape(location.hash.substring(1));
+          const $tabMenu = document.querySelector(`.tabs a[href="${id}"]`);
+          if (!$tabMenu) {
+            return;
+          }
+
+          const $tabMenuContainer = $tabMenu.parentElement.parentElement;
+          Array.from($tabMenuContainer.children).forEach($menu => $menu.classList.remove('is-active'));
+          Array.from($tabMenuContainer.querySelectorAll('a'))
+              .map($menu => document.getElementById($menu.getAttribute("href").substring(1)))
+              .forEach($content => $content.classList.add('is-hidden'));
+
+          if ($tabMenu) {
+              $tabMenu.parentElement.classList.add('is-active');
+          }
+          const $activeTab = document.querySelector(id);
+          if ($activeTab) {
+              $activeTab.classList.remove('is-hidden');
+          }
+      }
+      switchTab();
+      window.addEventListener('hashchange', switchTab, false);
+  })();
+  </script><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body class="is-3-column has-navbar-fixed-top"><nav class="navbar navbar-main is-fixed-top"><div class="container navbar-container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/logo.svg" alt="GaryBlog" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">Home</a><a class="navbar-item" href="/archives">Archives</a><a class="navbar-item" href="/categories">Categories</a><a class="navbar-item" href="/tags">Tags</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="noopener" title="Join Gitter" href="https://gitter.im/hexo-theme-amazing/community"><i class="fab fa-gitter"></i></a><a class="navbar-item" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/removeif/hexo-theme-amazing"><i class="fab fa-github"></i></a><a class="navbar-item search" title="搜索" href="javascript:;"><i class="fas fa-search"></i></a><a class="navbar-item" id="night-nav" title="Night Mode" href="javascript:;"><i class="fas fa-moon" id="night-icon"></i></a></div></div></div></nav><script type="text/javascript" src="/js/theme-setting.js"></script><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-8-tablet is-8-desktop is-9-widescreen"><!--!--><div class="card"><article class="card-content article" role="article"><div class="article-meta size-small is-uppercase level is-mobile"><div class="level-left"><i class="far fa-calendar-plus"> </i>2026-09-09  <a class="commentCountImg" href="/2026/09/09/Paper_Survey/#comment-container"><span class="display-none-class">355fd8d1897e4bbbac79874cab3b9a01</span><i class="far fa-comment-dots"></i> <span class="commentCount" id="355fd8d1897e4bbbac79874cab3b9a01">99+</span>  </a><span class="level-item"><i class="far fa-clock"> </i>1 小时  <i class="fas fa-pencil-alt"> </i>7.6 k</span><span class="level-item" id="busuanzi_container_page_pv"><span id="busuanzi_value_page_pv">0</span>次访问</span></div></div><h1 class="title is-3 is-size-4-mobile">从自我改进智能体到 Harness 工程：Recursive Self-Improving Agent 调研</h1><div class="content"><blockquote>
+<p>本文整理自《Paper Survey》演示文稿，讨论递归自我改进智能体（Recursive Self-Improving Agent，RSI）、典型自我改进 Harness，以及编码智能体的 Harness 工程。文中涉及论文版本、引用量和开源项目数据均来自原始调研材料，发布前建议再核对其最新元数据。</p>
+</blockquote>
+<span id="more"></span>
+
+<h1 id="从自我改进智能体到-Harness-工程"><a href="#从自我改进智能体到-Harness-工程" class="headerlink" title="从自我改进智能体到 Harness 工程"></a>从自我改进智能体到 Harness 工程</h1><p>大语言模型驱动的 Agent 已经具备长程规划、代码生成、工具使用和反思能力，但让系统持续变强，仍然高度依赖人工：人来诊断瓶颈、重新设计工作流、编写实现、构造数据并安排下一轮训练。</p>
+<p>Recursive Self-Improving Agent（RSI）关注的正是这一层问题：智能体不仅完成任务，也根据经验和评估反馈更新自身；进一步地，它还能改进“如何改进自己”的机制。</p>
+<h2 id="1-一个早期例子：OpenSearch-VL"><a href="#1-一个早期例子：OpenSearch-VL" class="headerlink" title="1. 一个早期例子：OpenSearch-VL"></a>1. 一个早期例子：OpenSearch-VL</h2><p>现代 Deep Search Agent 往往需要主动检索、证据核验和多步推理。OpenSearch-VL 的材料提供了一个面向视觉检索的实践例子：</p>
+<ul>
+<li>训练数据从 Wikipedia 路径采样、模糊实体改写和 source-anchor visual grounding 等流程构建，得到 <code>SearchVLSFT-36k</code> 与 <code>SearchVL-RL-8k</code>；</li>
+<li>系统可调用文本检索、图像检索、OCR、裁剪、锐化、超分和透视校正等工具；</li>
+<li>多轮训练中采用 fatal-aware GRPO：发生工具故障后屏蔽相关 token，避免故障沿后续轨迹级联，同时保留故障前仍有效的推理片段。</li>
+</ul>
+<p>它反映出一个现实问题：即使模型能力足够，公开数据、轨迹合成流程和训练细节若不透明，其他人也很难稳定复现 Agent 能力。</p>
+<h2 id="2-RSI-的定义与组成"><a href="#2-RSI-的定义与组成" class="headerlink" title="2. RSI 的定义与组成"></a>2. RSI 的定义与组成</h2><p>自我改进智能体根据执行经验和评价反馈，更新其内部组件或参数。可以将一个 Agent 抽象为五类可改进对象：</p>
+<table>
+<thead>
+<tr>
+<th>符号</th>
+<th>组件</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>M</code></td>
+<td>Foundation Model</td>
+<td>理解语言、规划、生成代码和调用工具</td>
+</tr>
+<tr>
+<td><code>H</code></td>
+<td>Agent Harness</td>
+<td>观察状态、组织流程、管理工具与执行环境</td>
+</tr>
+<tr>
+<td><code>D</code></td>
+<td>Agent Data System</td>
+<td>生产并利用环境、任务、轨迹和评价数据</td>
+</tr>
+<tr>
+<td><code>T</code></td>
+<td>Agent Trainer</td>
+<td>将训练证据转化为模型更新</td>
+</tr>
+<tr>
+<td><code>Imp</code></td>
+<td>Improvement Mechanism</td>
+<td>诊断、提出候选、验证并集成改进</td>
+</tr>
+</tbody></table>
+<p><img src="/images/Paper_Survey/rsi-overview.png" alt="RSI 总览"></p>
+<p>“自我改进”通常指其中一个组件发生变化，例如更新记忆库或重写工具调用流程。“协同改进”指多个组件共同变化，例如 Harness 改进后产生更有价值的轨迹，再由数据与训练模块将其转成模型能力。</p>
+<p>RSI 的关键区别在于 <code>Imp</code> 本身也会演化。若一个固定的优化器只是反复改 Prompt 或调参，它仍属于自我改进系统；只有优化器的诊断、搜索与验证方式也能被后续证据更新，才进入递归自我改进的讨论范围。</p>
+<p><img src="/images/Paper_Survey/rsi-taxonomy.png" alt="RSI 分类"></p>
+<p>一个完整的改进周期可概括为：定位瓶颈，提出修改候选，验证与筛选候选，再将有效候选纳入系统。真正困难之处不在于“生成一个修改”，而在于证明它在未知任务上仍然有益，并能在失败时安全回滚。</p>
+<h2 id="3-Harness-自我改进"><a href="#3-Harness-自我改进" class="headerlink" title="3. Harness 自我改进"></a>3. Harness 自我改进</h2><p>Harness 决定基础模型在什么状态下看到什么信息、可以执行什么动作，以及如何处理失败。它的改进不直接改变模型权重，而是改变模型调用时的外部条件、接口和可执行脚手架。</p>
+<p><img src="/images/Paper_Survey/harness-self-improvement.png" alt="Harness 自我改进概览"></p>
+<h3 id="3-1-模块层改进"><a href="#3-1-模块层改进" class="headerlink" title="3.1 模块层改进"></a>3.1 模块层改进</h3><p>模块层改进主要围绕记忆、技能与工具、Prompt 和上下文展开。</p>
+<p><strong>记忆。</strong> 将交互轨迹压缩为反思、示例、原因分析或经验条目，存入可检索的经验库。关键问题不只是“记住什么”，还包括如何组织、何时写入、如何压缩、检索是否可信、何时遗忘。层次化记忆、结构化语义、动态索引笔记、图结构和文档结构都是常见方向。</p>
+<p>成熟的记忆机制还需要门控与信用分配：系统应判断一条记忆是否仍有价值、是否可靠、能否迁移到新任务。否则错误经验会随着复用不断放大。</p>
+<p><strong>技能与工具。</strong> 可复用能力可以是代码、函数、API、工作流或技能文档。Agent 能从轨迹和外部资料中构造能力库，并进行去重、重构、合并和生命周期管理。更深一层的改进是学习何时选择、组合、细化或替换技能。</p>
+<p><strong>Prompt 与上下文。</strong> 系统提示词、任务指令、few-shot 示例、规则文档和上下文 playbook 都可视为可优化的外部参数。优化信号可以来自监督反馈、执行结果或可回滚的环境交互。多次模型调用时，难点会转为信用分配：究竟是哪个提示、哪个上下文片段或哪个工具结果带来了成功。</p>
+<h3 id="3-2-编排与架构"><a href="#3-2-编排与架构" class="headerlink" title="3.2 编排与架构"></a>3.2 编排与架构</h3><p>难任务通常无法由一次连续调用或固定工作流解决。编排层负责决定轨迹如何分叉、资源投向哪些候选、多个 Agent 如何协作以及反馈如何路由。</p>
+<p>常见机制包括：</p>
+<ul>
+<li>将推理、行动和规划视作搜索节点，采用 beam search、tree search 或蒙特卡洛树搜索；</li>
+<li>根据验证反馈、动作熵或失败信号，决定分支扩展、剪枝、修复或重启；</li>
+<li>缓存高价值轨迹并通过日志检索、蒸馏或表示引导跨任务复用；</li>
+<li>通过遗传算法、角色分工或元智能体搜索多 Agent 团队结构；</li>
+<li>优化工作流拓扑和通信方式，减少冗余消息，并根据任务复杂度和预算切换协作模式。</li>
+</ul>
+<p>编排的目的不是无边界地增加 rollout 数量。有效的系统需要尽早识别局部错误，有可信的选择信号，并把有价值的中间结果保留下来影响之后的决策。</p>
+<h3 id="3-3-自指式代码修改"><a href="#3-3-自指式代码修改" class="headerlink" title="3.3 自指式代码修改"></a>3.3 自指式代码修改</h3><p>自指式修改把可编辑范围扩大到 Harness 或 scaffold 自身。Agent 可以修改运行规则、动作接口、工具契约、运行时约束，甚至修改负责诊断和改进的程序。</p>
+<p><img src="/images/Paper_Survey/self-referential-modification.png" alt="自指式 Harness 修改"></p>
+<p>这类系统一般会使用失败信号、代码审查、反事实分析和测试结果定位问题，再修改 Harness 代码并验证候选。<code>STOP</code> 一类方案把这一过程递归应用于改进器，逐步形成 beam search、遗传算法等更强的搜索程序。</p>
+<p>开放式递归修改的风险也更高：一次错误提交可能污染记忆、工具和后续训练数据。因此需要把候选与当前版本比较，只在通过门槛时提交，保留版本历史与回滚能力，并将安全监控纳入改进循环。</p>
+<h2 id="4-Agent-Data-System-自我改进"><a href="#4-Agent-Data-System-自我改进" class="headerlink" title="4. Agent Data System 自我改进"></a>4. Agent Data System 自我改进</h2><p>数据系统包含两部分：数据生产与数据利用。前者生成或仿真环境、合成任务和轨迹，并完成验证与质量控制；后者决定数据的选择、排序、配比和课程安排。</p>
+<p><img src="/images/Paper_Survey/data-system-loop.png" alt="数据系统反馈闭环"></p>
+<h3 id="4-1-数据生产"><a href="#4-1-数据生产" class="headerlink" title="4.1 数据生产"></a>4.1 数据生产</h3><p>环境是 Agent 获得反馈的主要来源。高质量数据生产需要同时关注真实性、有效性、多样性和难度分布。合成环境如果退化为不可解、过于简单或与真实任务偏离，后续训练将失去意义。</p>
+<p>任务合成需要定义任务指令、环境状态、约束、可用工具、可验证标准以及必要时的示范轨迹。质量控制可以使用规则、模型一致性、结构检查和外部验证器。另一种更具挑战性的信号是能力边界匹配：生成强模型可解、弱模型难解的任务，以持续逼近当前能力边界。</p>
+<p>轨迹方面，可以通过竞争式交互、答案细化、恢复轨迹和受控扰动，获得正确性、难度和多样性更高的经验。验证器自身也可以改进，但必须防止它与生成器形成自我确认的闭环。</p>
+<h3 id="4-2-数据利用与课程适配"><a href="#4-2-数据利用与课程适配" class="headerlink" title="4.2 数据利用与课程适配"></a>4.2 数据利用与课程适配</h3><p>固定的数据配方很容易成为瓶颈。课程适配器可以根据训练反馈调整难度、选择数据子集，或为不同能力缺口重新分配训练预算。</p>
+<ul>
+<li><strong>规则式适配</strong>：预先定义更新规则，例如依据 reward 调整工具数量、交互步数或系统提示的具体程度；</li>
+<li><strong>离线学习式适配</strong>：在部署前联合学习难度估计器、元策略或奖励模型；</li>
+<li><strong>在线学习式适配</strong>：训练时让 curator 选择预计能带来最大提升的问题，性能变化再反馈给 curator。</li>
+</ul>
+<p>数据生产和利用可以协同更新。Capability Boundary Matching 根据求解器当前能力边界决定下一轮生成与选择的数据；Goal-directed Curriculum Bridging 则从目标任务出发，判断中间训练任务是否真的构成通往目标能力的有效台阶。</p>
+<h2 id="5-Agent-Trainer-自我改进"><a href="#5-Agent-Trainer-自我改进" class="headerlink" title="5. Agent Trainer 自我改进"></a>5. Agent Trainer 自我改进</h2><p>Trainer 决定训练证据如何变成模型更新，可分为监督设计、优化策略和训练基础设施三部分。</p>
+<p><img src="/images/Paper_Survey/trainer-self-improvement.png" alt="训练器自我改进"></p>
+<h3 id="5-1-内循环适配"><a href="#5-1-内循环适配" class="headerlink" title="5.1 内循环适配"></a>5.1 内循环适配</h3><p>内循环中，当前训练的证据直接修改 Trainer，但改进机制本身保持固定。可变内容包括：</p>
+<ul>
+<li>标签、奖励、批评、教师目标以及 rubric；</li>
+<li>步骤级奖励和更细粒度的信用分配；</li>
+<li>不同监督信号的路由与权重；</li>
+<li>目标函数、优化算法和学习率、batch size 等超参数；</li>
+<li>CUDA kernel、分布式拓扑、并行策略和资源调度。</li>
+</ul>
+<p>例如，系统可根据梯度噪声、吞吐量和设备负载动态调整 worker 数量或 collective topology。关键在于，这些重配置应由运行时证据触发，而不是仅靠人工静态设置。</p>
+<h3 id="5-2-外循环训练器搜索"><a href="#5-2-外循环训练器搜索" class="headerlink" title="5.2 外循环训练器搜索"></a>5.2 外循环训练器搜索</h3><p>外循环跨越多个训练实验。每个实验按常规方式训练模型，实验之间则由改进机制读取日志、reward、KL、回复长度等证据，提出新的训练器候选，并在验证协议下选择是否保留。</p>
+<p>一个稳健的外循环应完成以下事情：</p>
+<ol>
+<li>将原始日志转为能绑定到明确版本的诊断证据；</li>
+<li>明确故障方式、可能原因、影响对象和不确定性；</li>
+<li>生成可执行的候选，包括配置修改、损失或奖励代码、采样策略与完整训练流水线；</li>
+<li>用完整训练、多保真评估、共享 checkpoint 分支和多随机种子验证候选；</li>
+<li>将 no-change control、置信阈值和 abstention 规则写入决策流程。</li>
+</ol>
+<h3 id="5-3-元循环：改进机制也要演化"><a href="#5-3-元循环：改进机制也要演化" class="headerlink" title="5.3 元循环：改进机制也要演化"></a>5.3 元循环：改进机制也要演化</h3><p>元循环的目标是让 <code>Imp_t</code> 根据多个训练周期的累计证据演化为 <code>Imp_&#123;t+1&#125;</code>。改进对象可以是负责后续决策的模型，也可以是其运行 Harness，例如分析器、技能、执行代码、角色分配和团队组织。</p>
+<p>当现有证据无法解释实验结果、无法区分竞争假设，或无法证明下一项干预合理时，系统不应只修改训练配置，也应有能力修订诊断与组织机制本身。</p>
+<h2 id="6-跨组件协同改进"><a href="#6-跨组件协同改进" class="headerlink" title="6. 跨组件协同改进"></a>6. 跨组件协同改进</h2><p>组件之间天然相互依赖。更好的 skill、tool、workflow 和 scaffold 会产生更有信息量的轨迹与训练信号；训练后的策略变化又会揭示 Harness 中最值得修订的模块。</p>
+<p>几个典型闭环包括：</p>
+<ul>
+<li><strong>Harness 与 Trainer</strong>：技能与经验回放可作为条件信号或蒸馏目标，训练后的新策略继续细化技能库；</li>
+<li><strong>Harness 与 Data</strong>：改进工具和 Harness 代码扩大动作空间，失败轨迹与调试记录反过来推动新工具和新代码；</li>
+<li><strong>Data 与 Trainer</strong>：更好的训练产生更有价值的数据，数据质量提升又进一步改善训练；</li>
+<li><strong>模拟器与 Policy</strong>：真实轨迹修正 world model，改进后的 world model 再在当前策略的薄弱区域合成经验。</li>
+</ul>
+<p>难点是跨组件信用分配。面对状态</p>
+<p>$$<br>z_t &#x3D; {\text{trace}, \text{error}, \text{reward}, \text{history}, \text{cost}},<br>$$</p>
+<p>系统需要决定下一步应更新 Prompt、Memory、Tool、Harness、Data、Weights 还是 Trainer，也可能需要联合更新多个组件。</p>
+<h2 id="7-开放问题"><a href="#7-开放问题" class="headerlink" title="7. 开放问题"></a>7. 开放问题</h2><h3 id="7-1-需要多少外部真实信号"><a href="#7-1-需要多少外部真实信号" class="headerlink" title="7.1 需要多少外部真实信号"></a>7.1 需要多少外部真实信号</h3><p>自我改进若过度依赖系统内部生成的标签、评价和经验，可能出现多样性坍缩、奖励投机、评价器漂移和自我确认错误。真实答案、单元测试、环境反馈和人类评价等外部信号能打破该闭环。</p>
+<p>可以把外部可靠信号的比例记为 $\alpha$。一个值得研究的问题是，是否存在临界值：高于该值时系统能够持续改善，低于该值时误差会逐步放大。直觉上，所需的 $\alpha$ 与验证器可靠性正相关，与系统内部错误放大能力负相关。</p>
+<p>从可靠性看，形式化验证器通常强于执行反馈，执行反馈通常强于学习型 Judge，学习型 Judge 又强于纯粹的自评估。如何提升内部信号的可审计性，仍是 RSI 的核心问题。</p>
+<h3 id="7-2-如何证明“改进机制”真的进步"><a href="#7-2-如何证明“改进机制”真的进步" class="headerlink" title="7.2 如何证明“改进机制”真的进步"></a>7.2 如何证明“改进机制”真的进步</h3><p>单次性能提升不足以证明 RSI。更有说服力的实验应比较：固定 <code>Imp_0</code> 下的 $A_0 \rightarrow A_1 \rightarrow A_2$，以及更新改进机制后的 $A_0 \rightarrow A_1 \rightarrow A_2’$。若后者在未见任务、多个周期和多个领域中更稳定，才能说明机制本身发生了改善。</p>
+<h3 id="7-3-安全与可信性"><a href="#7-3-安全与可信性" class="headerlink" title="7.3 安全与可信性"></a>7.3 安全与可信性</h3><p>错误或恶意投毒的经验一旦被写入 skill、memory 或 evaluator，可能跨任务持久化并持续放大。安全设计至少需要覆盖候选门控、版本追踪、可回滚状态、独立验证、权限隔离和异常审计。</p>
+<h2 id="8-案例一：Darwin-Godel-Machine"><a href="#8-案例一：Darwin-Godel-Machine" class="headerlink" title="8. 案例一：Darwin Godel Machine"></a>8. 案例一：Darwin Godel Machine</h2><p>Darwin Godel Machine（DGM）将自我改进聚焦在编码 Agent 的 Harness 上：基础模型保持固定，系统修改自身源代码与 Agent 设计，并在下游任务评估改进效果。</p>
+<p><img src="/images/Paper_Survey/darwin-godel-machine.png" alt="Darwin Godel Machine"></p>
+<p>经典 Godel Machine 强调通过数学证明确认修改有益，DGM 则采用实验验证。其基本思想是：搜索空间巨大且容易陷入局部最优，因此将探索得到的候选都归档，保留多样性和未来可能有用的分支。原始材料中提到其在 SWE-Bench、Polyglot 等编码评测上进行探索，并使用沙箱与可追溯改进记录控制风险。</p>
+<p>这个案例的循环很直接：编码能力提升，有助于改进自身代码；更好的 Harness 又反过来提升编码能力。真正需要谨慎验证的是，这种提升是否来自对特定 benchmark 的适配，还是能够迁移到未见任务。</p>
+<h2 id="9-案例二：Prime-Agent"><a href="#9-案例二：Prime-Agent" class="headerlink" title="9. 案例二：Prime Agent"></a>9. 案例二：Prime Agent</h2><p>Prime Agent 将自己定位为长程 evaluation 与 coding agent，并用 Recursive Language Model（RLM）和 Continual Harness 支持跨任务的持续状态。</p>
+<h3 id="9-1-信息与计算管理"><a href="#9-1-信息与计算管理" class="headerlink" title="9.1 信息与计算管理"></a>9.1 信息与计算管理</h3><p>RLM 通过持久化的 IPython REPL 让模型用程序化方式处理上下文、执行测试和调用工具；递归子 Agent 可以并行工作并相互通信。Harness 负责将模型选择的动作转换为代码执行、工具调用或子会话，并记录模型调用、工具使用、消息、资源消耗和 Harness 修改。</p>
+<p><img src="/images/Paper_Survey/prime-agent-architecture.png" alt="Prime Agent 架构"></p>
+<p>材料将状态分为四层：</p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>类比</th>
+<th>保存内容</th>
+<th>典型更新</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>L0</td>
+<td>CPU</td>
+<td>模型权重、先验知识与推理能力</td>
+<td>微调，通常保持固定</td>
+</tr>
+<tr>
+<td>L1</td>
+<td>RAM</td>
+<td>当前模型可见的活跃上下文</td>
+<td>压缩与重启</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>进程</td>
+<td>REPL、工具、变量、子 Agent 状态</td>
+<td>创建、保留、总结、删除</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>硬盘</td>
+<td>history、artifacts、memory、skills、prompts、子 Agent 规范</td>
+<td>Refinement 与版本化更新</td>
+</tr>
+</tbody></table>
+<p>L2 到 L1 的信息会通过打印结果或返回值序列化为 token；L1 中的旧对话可压缩并归档到 L3；运行时再把相关的 L3 条目检索并注入 L1。这样可以在有限上下文内维持较长任务链，同时保留恢复、分支和回滚的基础。</p>
+<h3 id="9-2-Continual-Harness"><a href="#9-2-Continual-Harness" class="headerlink" title="9.2 Continual Harness"></a>9.2 Continual Harness</h3><p>Continual Harness 位于 L3，保存四类持久条目：Prompt note、Memory、Skill 和 Subagent Specification。它支持创建、读取、更新与删除；Refinement 会把轨迹证据转为带版本控制的状态更新，记录来源与预期效果。</p>
+<p><img src="/images/Paper_Survey/continual-harness.png" alt="Continual Harness"></p>
+<p>从这个角度看，自我改进就是把有价值的执行过程沉淀为下次任务可复用的外部状态：有用计算变成技能，重复协作模式变成子 Agent 规范，修正后的假设变成记忆或提示笔记。</p>
+<h3 id="9-3-调研材料中的一次实验记录"><a href="#9-3-调研材料中的一次实验记录" class="headerlink" title="9.3 调研材料中的一次实验记录"></a>9.3 调研材料中的一次实验记录</h3><p>原始材料记录了一个小规模 Polyglot 设置：使用 GLM-5.3-flash，随机选取 5 个任务，Refine 前首次通过率为 60%，Refine 后为 100%。该结果规模有限，适合作为持续改进机制的演示，而非普适能力结论。</p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th align="right">Input tokens</th>
+<th align="right">Output tokens</th>
+<th align="right">Cache read</th>
+<th align="right">Cost ($)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>前置 5 个任务</td>
+<td align="right">60,945</td>
+<td align="right">79,548</td>
+<td align="right">335,872</td>
+<td align="right">0.0256</td>
+</tr>
+<tr>
+<td>Refine</td>
+<td align="right">24,693</td>
+<td align="right">4,301</td>
+<td align="right">70,912</td>
+<td align="right">0.0036</td>
+</tr>
+<tr>
+<td>启用改进</td>
+<td align="right">128,230</td>
+<td align="right">68,604</td>
+<td align="right">909,056</td>
+<td align="right">0.0370</td>
+</tr>
+<tr>
+<td>未启用改进</td>
+<td align="right">25,405</td>
+<td align="right">53,403</td>
+<td align="right">444,160</td>
+<td align="right">0.0200</td>
+</tr>
+</tbody></table>
+<p>四个任务执行示意如下：</p>
+<p><img src="/images/Paper_Survey/prime-agent-result-1.png" alt="实验任务一"></p>
+<p><img src="/images/Paper_Survey/prime-agent-result-2.png" alt="实验任务二"></p>
+<p><img src="/images/Paper_Survey/prime-agent-result-3.png" alt="实验任务三"></p>
+<p><img src="/images/Paper_Survey/prime-agent-result-4.png" alt="实验任务四"></p>
+<p>该例子也说明一个务实的取舍：Refine 可以带来收益，但需要额外 token、执行时间和可靠验证机制。任务变难后，如何避免“总结出错误规则并长期复用”会变得更关键。</p>
+<h2 id="10-Harness-工程：编码-Agent-的运行时"><a href="#10-Harness-工程：编码-Agent-的运行时" class="headerlink" title="10. Harness 工程：编码 Agent 的运行时"></a>10. Harness 工程：编码 Agent 的运行时</h2><p>可以将编码 Agent 简化为：</p>
+<p>$$<br>\text{Agent} &#x3D; \text{Base Model} + \text{Harness}.<br>$$</p>
+<p>Harness 负责 Agent loop、上下文、工具、执行环境、权限、记忆、子 Agent、恢复、验证和扩展。随着基础模型能力接近，竞争重点逐渐转到这套运行时系统如何组织模型能力。</p>
+<p>调研材料将 Harness 拆为七个部分：Agent Loop、LLM Integration、Tool &amp; Action System、Memory &amp; Context、Safety &amp; Permission、Orchestration 和 Extensibility。</p>
+<h3 id="10-1-Agent-Loop"><a href="#10-1-Agent-Loop" class="headerlink" title="10.1 Agent Loop"></a>10.1 Agent Loop</h3><p>最常见的是迭代式循环：模型提出行动，Harness 执行并返回观察，再继续下一轮。更复杂的系统会加入反思、验证、并发调度、循环检测和预算控制。</p>
+<p><img src="/images/Paper_Survey/agent-loop-comparison.png" alt="Agent Loop 对比"></p>
+<table>
+<thead>
+<tr>
+<th>系统</th>
+<th>循环类型</th>
+<th>并发策略</th>
+<th>卡住检测</th>
+<th>停止条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Mini-SWE-Agent</td>
+<td>线性 <code>while</code></td>
+<td>串行</td>
+<td>步数、格式错误、运行上限</td>
+<td>退出消息</td>
+</tr>
+<tr>
+<td>Aider</td>
+<td>生成器加反思</td>
+<td>串行</td>
+<td>最大反思次数</td>
+<td>流结束且无反思</td>
+</tr>
+<tr>
+<td>Claude Code</td>
+<td>流式加批处理</td>
+<td>安全分区批处理</td>
+<td>手动处理</td>
+<td><code>end_turn</code></td>
+</tr>
+<tr>
+<td>Codex</td>
+<td>异步状态机</td>
+<td>有序 futures</td>
+<td>材料未列出</td>
+<td><code>end_turn</code></td>
+</tr>
+<tr>
+<td>Gemini CLI</td>
+<td>异步生成器加调度器</td>
+<td>并行，编辑强制串行</td>
+<td>SHA-256 加模型检查</td>
+<td><code>end_turn</code> 或 100 轮</td>
+</tr>
+<tr>
+<td>OpenHands</td>
+<td>事件溯源会话引擎</td>
+<td>资源锁下的并行批处理</td>
+<td>五类场景</td>
+<td><code>FINISHED</code></td>
+</tr>
+</tbody></table>
+<p>循环本身越开放，就越需要明确的停止条件、资源预算和恢复策略，否则系统容易重复执行相似动作或在局部错误中消耗大量上下文。</p>
+<h3 id="10-2-LLM-Integration"><a href="#10-2-LLM-Integration" class="headerlink" title="10.2 LLM Integration"></a>10.2 LLM Integration</h3><p>LLM Integration 负责模型调用、Prompt 组装、缓存、模型路由和推理内容管理。不同系统的共同趋势是将稳定内容与动态内容分开，以提高缓存命中率并降低重复 token 成本。</p>
+<table>
+<thead>
+<tr>
+<th>系统</th>
+<th>Prompt 组织</th>
+<th>缓存或路由特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OpenHands</td>
+<td>Prompt Registry，静态与动态模块分离</td>
+<td>使用 <code>cache_control</code> 标记</td>
+</tr>
+<tr>
+<td>Claude Code</td>
+<td>多个命名模块并设边界</td>
+<td>基于哈希与边界标记</td>
+</tr>
+<tr>
+<td>Codex</td>
+<td>服务端按模型提供 Prompt</td>
+<td>以 thread 标识关联缓存</td>
+</tr>
+<tr>
+<td>Gemini CLI</td>
+<td>基础 Prompt、工具、项目上下文、memory、skills</td>
+<td>模型变化时重建</td>
+</tr>
+<tr>
+<td>Mistral Vibe</td>
+<td>每个 Agent 独立 Prompt，可进行 A&#x2F;B 版本选择</td>
+<td>缓存 Git 状态</td>
+</tr>
+<tr>
+<td>OpenCode</td>
+<td>按模型类型匹配 Prompt 矩阵</td>
+<td>多种缓存分界和 session key</td>
+</tr>
+</tbody></table>
+<h3 id="10-3-工具与行动系统"><a href="#10-3-工具与行动系统" class="headerlink" title="10.3 工具与行动系统"></a>10.3 工具与行动系统</h3><p>编码 Agent 的工具系统不仅决定“能做什么”，也决定失败时系统能否给出可恢复的反馈。编辑操作尤其是一个工程重点。</p>
+<table>
+<thead>
+<tr>
+<th>系统</th>
+<th>编辑接口</th>
+<th>匹配和失败处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Claude Code</td>
+<td>精确字符串替换</td>
+<td>唯一子串匹配，失败时返回错误和上下文</td>
+</tr>
+<tr>
+<td>Codex</td>
+<td><code>*** Begin/End Patch</code> 补丁格式</td>
+<td>统一 diff 块与块级重试</td>
+</tr>
+<tr>
+<td>Aider</td>
+<td>SEARCH&#x2F;REPLACE、udiff 等多种格式</td>
+<td>从精确匹配逐步放宽到模糊匹配</td>
+</tr>
+<tr>
+<td>OpenHands</td>
+<td><code>str_replace_editor</code>、<code>apply_patch</code> 等</td>
+<td>精确唯一匹配，支持撤销编辑</td>
+</tr>
+<tr>
+<td>Gemini CLI</td>
+<td><code>edit</code> 与 <code>write_file</code></td>
+<td>精确、灵活、正则、模糊的级联匹配</td>
+</tr>
+<tr>
+<td>Hermes</td>
+<td>单一 Patch 工具加 DSL</td>
+<td>多阶段匹配，失败后可升级到写文件</td>
+</tr>
+<tr>
+<td>OpenCode</td>
+<td>按模型切换 Patch 或 SEARCH&#x2F;REPLACE</td>
+<td>区分未找到与匹配歧义，并附加诊断</td>
+</tr>
+</tbody></table>
+<p>这里没有一种绝对最佳的编辑语言。精确匹配可预测但容易失败，模糊匹配更宽容却可能改错位置。成熟系统通常把格式设计、可理解报错、重试机制和预览或回滚结合起来。</p>
+<h3 id="10-4-Memory-与-Context"><a href="#10-4-Memory-与-Context" class="headerlink" title="10.4 Memory 与 Context"></a>10.4 Memory 与 Context</h3><p>上下文管理决定长程任务能否延续。常见策略包括线性保留、递归摘要、可插拔压缩器、状态快照和会话树上的增量摘要。</p>
+<p><img src="/images/Paper_Survey/context-management.png" alt="上下文管理"></p>
+<p>例如，Aider 在历史超过上限后摘要前半段内容；OpenHands 将压缩器作为独立模块并把压缩过程写入事件日志；部分系统保留最近历史原文，同时把更早内容压缩为可恢复的状态。重点不是单纯缩短 token，而是让模型在压缩后仍能找到关键决策、错误证据和未完成的工作。</p>
+<h3 id="10-5-Safety-与-Permission"><a href="#10-5-Safety-与-Permission" class="headerlink" title="10.5 Safety 与 Permission"></a>10.5 Safety 与 Permission</h3><p>Agent 具有命令执行与文件操作能力时，安全不应只靠模型的自我约束。常见保护层包括执行策略、生命周期钩子、对高风险动作的审批审查，以及操作系统级沙箱。</p>
+<p><img src="/images/Paper_Survey/codex-safety.png" alt="权限与安全分层"></p>
+<p>权限系统应让模型知道哪些动作可直接执行、哪些需要确认、哪些被禁止，并保留精确的动作记录。自我改进系统还需额外限制：修改自身策略、工具和持久记忆时，应经过独立验证与可逆提交。</p>
+<h3 id="10-6-多-Agent-编排"><a href="#10-6-多-Agent-编排" class="headerlink" title="10.6 多 Agent 编排"></a>10.6 多 Agent 编排</h3><p>多 Agent 运行时需要处理任务拆分、子任务并行、消息传递、结果汇总和资源隔离。除了提高吞吐量，编排还要避免同质化重复工作和无效通信。</p>
+<p><img src="/images/Paper_Survey/orchestration.png" alt="多 Agent 编排"></p>
+<p>一个可控的架构通常会明确父子会话的生命周期、可共享资源、消息边界、预算上限和中断后的恢复方式。对于复杂任务，分配更多计算给不确定性高的节点往往比平均扩展所有分支更有效。</p>
+<h3 id="10-7-扩展性：Skills、插件与-MCP"><a href="#10-7-扩展性：Skills、插件与-MCP" class="headerlink" title="10.7 扩展性：Skills、插件与 MCP"></a>10.7 扩展性：Skills、插件与 MCP</h3><p>扩展机制决定 Harness 能否接入特定领域能力。调研材料显示，多个系统都支持 Skill，并逐步采用 <code>SKILL.md</code> 或 agentskills.io 兼容的描述方式。</p>
+<table>
+<thead>
+<tr>
+<th>系统</th>
+<th>Skill 发现位置示例</th>
+<th>调用或加载方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Claude Code</td>
+<td><code>.claude/skills/</code> 与用户目录</td>
+<td>延迟加载的 Skill 工具</td>
+</tr>
+<tr>
+<td>Codex</td>
+<td><code>core-skills/</code>、<code>skills/</code> 与插件路径</td>
+<td>列表、RPC、TUI 提及或隐式触发</td>
+</tr>
+<tr>
+<td>Gemini CLI</td>
+<td><code>.gemini/skills/</code>、<code>.agents/skills/</code> 等</td>
+<td><code>ActivateSkill</code> 按需加载</td>
+</tr>
+<tr>
+<td>Mistral Vibe</td>
+<td><code>.agents/skills/</code>、<code>.vibe/skills/</code> 等</td>
+<td>skill 工具或 slash command</td>
+</tr>
+<tr>
+<td>OpenHands</td>
+<td>工作区、Git 根目录、用户目录等</td>
+<td>展示元数据，再按需调用</td>
+</tr>
+<tr>
+<td>Hermes</td>
+<td>内置目录与 Skills Hub</td>
+<td>index、查看正文、加载资源的渐进流程</td>
+</tr>
+<tr>
+<td>OpenCode</td>
+<td>配置目录、项目目录和远程 registry</td>
+<td>原生延迟加载工具</td>
+</tr>
+</tbody></table>
+<p>一个值得注意的趋势是：通用 Agent 框架并没有成为主流编码智能体的核心依赖。许多系统选择用 Python、TypeScript 或 Rust 手写异步循环、工具注册表和权限逻辑，以换取更强的调试性、可控性与 Prompt 控制。同时，代码检索更常依赖 <code>rg</code>、tree-sitter、glob 和项目内 Markdown 指南，而不是通用代码 RAG。</p>
+<h2 id="11-评测基准与“Bench-of-Bench”"><a href="#11-评测基准与“Bench-of-Bench”" class="headerlink" title="11. 评测基准与“Bench of Bench”"></a>11. 评测基准与“Bench of Bench”</h2><p>编码 Agent 与 Harness 的评测常见于以下基准：</p>
+<table>
+<thead>
+<tr>
+<th>基准</th>
+<th>主要任务</th>
+<th>调研材料中的注意点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SWE-Bench</td>
+<td>修复真实软件工程问题</td>
+<td>有 Verified、Multilingual、Live、Pro 等变体，通常依赖 Docker</td>
+</tr>
+<tr>
+<td>Terminal-Bench v4</td>
+<td>在终端完成复杂真实任务</td>
+<td>持续维护，通常依赖 Docker</td>
+</tr>
+<tr>
+<td>Harness-Bench</td>
+<td>直接评估 Harness 差异</td>
+<td>较新，认可度仍需观察</td>
+</tr>
+<tr>
+<td>TUA-Bench</td>
+<td>通用终端使用</td>
+<td>较新</td>
+</tr>
+<tr>
+<td>OSWorld</td>
+<td>GUI 与 computer-use</td>
+<td>不局限于编码</td>
+</tr>
+<tr>
+<td>tau2-Bench</td>
+<td>Tool&#x2F;API 与用户交互</td>
+<td>材料指出部分任务可能存在质量问题</td>
+</tr>
+</tbody></table>
+<p>原始调研材料特别提到 tau2-Bench 的潜在问题：Airline 子集有 22&#x2F;50 个任务可能在不执行操作时获得满分，44&#x2F;50 个 <code>communicate_info</code> 为空时评分器仍可能给通信项满分；Banking 的个别任务曾出现退款金额或出生日期与金标不一致。这些例子提醒我们，benchmark 本身也需要验证。</p>
+<p>因此，除了让 Agent 在 benchmark 上得分，更应评估 benchmark 是否正确、是否有区分度、是否存在投机路径，以及是否与真实能力相关。这个方向可以称为 “Bench of Bench”。</p>
+<h2 id="12-可能的研究机会"><a href="#12-可能的研究机会" class="headerlink" title="12. 可能的研究机会"></a>12. 可能的研究机会</h2><p><img src="/images/Paper_Survey/evo-bench.png" alt="Evo-Bench 指标"></p>
+<p>Evo-Bench 被原始材料列为评估 LLM 内在 Agent 框架自我进化能力的一个方向。它区分两类分数：</p>
+<ul>
+<li><strong>Overall Score</strong>：对冻结后的最终 Harness 在未见评测任务上打分，用于降低对已知任务过拟合的影响；</li>
+<li><strong>Anytime Validation Score</strong>：衡量整个进化过程中的平均最佳验证表现，反映系统能否较快找到高质量 Harness。</li>
+</ul>
+<p>除编码外，RSI 还可能进入 GUI&#x2F;computer-use、机器人、科学发现、硬件与 EDA、医疗模拟等领域。每个领域都需要重新回答相同的问题：什么是可靠反馈，哪些状态可以持久化，什么修改应允许自动提交，以及怎样证明能力提升能够迁移。</p>
+<h2 id="13-总结"><a href="#13-总结" class="headerlink" title="13. 总结"></a>13. 总结</h2><p>RSI 不是给 Agent 增加一次反思或一个记忆库，而是把诊断、候选搜索、验证、提交与回滚组成可持续运行的闭环。Harness、数据系统、训练器以及改进机制本身都可能成为优化对象。</p>
+<p>短期内，最务实的方向是构建可审计的局部闭环：用可靠外部信号验证记忆、工具、工作流或训练配置的改动；保留版本历史；在未见任务上验证；让失败可追溯且可回滚。长期目标才是让改进机制跨周期、跨组件、跨领域地稳定进化。</p>
+<h2 id="参考材料"><a href="#参考材料" class="headerlink" title="参考材料"></a>参考材料</h2><ul>
+<li><code>OpenSearch-VL</code>、<code>Recursive Self-Improving Agent</code> 与 Harness 调研演示文稿</li>
+<li>Self-adapting Language Models，SEAL 项目</li>
+<li>Darwin Godel Machine: Open-Ended Evolution of Self-Improving Agents</li>
+<li>Prime Agent: A Self-Improving Recursive Language Model Harness</li>
+<li>Harness Engineering: Anatomy, Architecture, and Evolution of Coding Agents</li>
+<li>Evo-Bench</li>
+</ul>
+</div><div class="article-licensing box"><div class="licensing-title"><p>从自我改进智能体到 Harness 工程：Recursive Self-Improving Agent 调研</p><p><a href="https://garyaacm.github.io/2026/09/09/Paper_Survey/">https://garyaacm.github.io/2026/09/09/Paper_Survey/</a></p></div><div class="licensing-meta level is-mobile"><div class="level-left"><div class="level-item is-narrow"><div><h6>作者</h6><a href="https://GaryAacm.github.io"><p>Gary</p></a></div></div><div class="level-item is-narrow"><div><h6>发布于</h6><p>2026-09-09</p></div></div><div class="level-item is-narrow"><div><h6>更新于</h6><p>2026-09-09</p></div></div><div class="level-item is-narrow"><div><h6>许可协议</h6><p><a class="icon" rel="noopener" target="_blank" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a><a class="icon" rel="noopener" target="_blank" title="Attribution" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a><a class="icon" rel="noopener" target="_blank" title="Noncommercial" href="https://creativecommons.org/licenses/by-nc/4.0/"><i class="fab fa-creative-commons-nc"></i></a></p></div></div></div></div></div><div class="recommend-area"><div class="recommend-post"><span class="is-size-6 has-text-grey has-mr-7"># 相关文章</span><br><span>  1.<a class="is-size-6" href="/2026/09/09/stf%E5%9F%BA%E7%A1%80/" target="_blank">SFT 基础</a><br></span><span>  2.<a class="is-size-6" href="/2026/08/18/ImageBind/" target="_blank">多模态全域对齐与 Agent 隐空间通信：ImageBind 核心机制、源码剖析与实战</a><br></span><span>  3.<a class="is-size-6" href="/2026/08/18/CLIP(1)/" target="_blank">多智能体隐空间通信与多模态 Memory：从 CLIP 表征对齐到 Latent 通信实践（1）</a><br></span><span>  4.<a class="is-size-6" href="/2025/05/27/BP%E5%9F%BA%E7%A1%80/" target="_blank">BP神经网络</a><br></span><span>  5.<a class="is-size-6" href="/2025/05/25/Transformer%E5%9F%BA%E7%A1%80/" target="_blank">Transformer基础</a><br></span><span>  6.<a class="is-size-6" href="/2025/05/25/CNN%E5%9F%BA%E7%A1%80/" target="_blank">卷积神经网络(CNN)</a><br></span><span>  7.<a class="is-size-6" href="/2025/05/25/YOLO%E5%9F%BA%E7%A1%80/" target="_blank">YOLO原理</a><br></span><span>  8.<a class="is-size-6" href="/2025/05/20/Maching_Learning(2)/" target="_blank">机器学习一些进阶知识</a><br></span></div></div><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/social-share.js/1.0.16/css/share.min.css"><div class="social-share"></div><script src="https://cdnjs.loli.net/ajax/libs/social-share.js/1.0.16/js/social-share.min.js"></script></article></div><!--!--><nav class="post-navigation mt-4 level is-mobile"><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2026/09/09/stf%E5%9F%BA%E7%A1%80/"><span class="level-item">SFT 基础</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><!--!--><div class="card"><div class="card-content"><div class="title is-5">评论</div><div id="comment-container"></div><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/gitalk/1.6.0/gitalk.css"><script> $.getScript('/js/gitalk.min.js', function () { 
+            var gitalk = new Gitalk({
+            language:'zh-CN',
+            id: '355fd8d1897e4bbbac79874cab3b9a01',
+            repo: 'blog_comment',
+            owner: 'Gray',
+            clientID: '46a9f3481b46ea0129d8',
+            clientSecret: '79c7c9cb847e141757d7864453bcbf89f0655b24',
+            admin: ["removeif"],
+            createIssueManually: true,
+            distractionFreeMode: false,
+            perPage: 10,
+            pagerDirection: 'last',
+            proxy: 'https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token',
+            
+            enableHotKey: true,
+            isLocked: false
+        })
+        gitalk.render('comment-container')});</script></div></div></div><div class="column column-left is-4-tablet is-4-desktop is-3-widescreen  order-1 is-sticky"><!--!--><div class="card widget" data-type="profile"><div class="card-content"><nav class="level"><div class="level-item has-text-centered flex-shrink-1"><div><figure class="image is-128x128 mx-auto mb-2"><img class="avatar is-rounded" src="https://cdn.jsdelivr.net/gh/GaryAacm/image-hosting@main/bg.jpg" alt="Gary"></figure><p class="title is-size-4 is-block" style="line-height:inherit;">Gary</p><p class="is-size-6 is-block">天下万般兵刃，唯有过往伤人最深</p><p class="is-size-6 is-flex justify-content-center"><i class="fas fa-map-marker-alt mr-1"></i><span>中国</span></p></div></div></nav><nav class="level is-mobile"><div class="level-item has-text-centered is-marginless"><div><p class="heading">文章</p><a href="/archives/"><p class="title">21</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">分类</p><a href="/categories/"><p class="title">5</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">标签</p><a href="/tags/"><p class="title">47</p></a></div></div></nav><div class="level"><a class="level-item button is-primary is-rounded" href="https://github.com/GaryAacm" target="_blank" rel="noopener">关注我</a></div><div class="level is-mobile"><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="Github" href="https://github.com/GaryAacm"><i class="fab fa-github"></i></a><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="RSS" href="/atom.xml"><i class="fas fa-rss"></i></a></div><div><hr><p id="hitokoto">:D 一言句子获取中...</p><script type="text/javascript" defer>function getYiyan(){
+                                $.getJSON("https://v1.hitokoto.cn/", function (data) {
+                                if(data){
+                                    $('#hitokoto').html("");
+                                    $('#hitokoto').append("<strong style='color: #3273dc;'>"+data.hitokoto+"</strong>"+
+                                    "<p>"+"来源《"+data.from+"》</p><p>提供者-"+data.creator+"</p>");
+                                }});}
+                                $(function (){getYiyan();$('#hitokoto').click(function(){getYiyan();})});</script></div></div></div><div class="card widget" data-type="links"><div class="card-content"><div class="menu"><h3 class="menu-label">链接</h3><ul class="menu-list"><li><a class="level is-mobile" href="https://hexo.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Hexo</span></span><span class="level-right"><span class="level-item tag">hexo.io</span></span></a></li><li><a class="level is-mobile" href="https://bulma.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Bulma</span></span><span class="level-right"><span class="level-item tag">bulma.io</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新评论</h3><span class="body_hot_comment">加载中，最新评论有1分钟缓存...</span></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新文章</h3><article class="media"><div class="media-content"><p class="date"><time dateTime="2026-09-09T15:20:00.000Z">2026-09-09</time></p><p class="title"><a href="/2026/09/09/Paper_Survey/">从自我改进智能体到 Harness 工程：Recursive Self-Improving Agent 调研</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2026-09-09T14:00:00.000Z">2026-09-09</time></p><p class="title"><a href="/2026/09/09/stf%E5%9F%BA%E7%A1%80/">SFT 基础</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2026-08-18T12:00:00.000Z">2026-08-18</time></p><p class="title"><a href="/2026/08/18/ImageBind/">多模态全域对齐与 Agent 隐空间通信：ImageBind 核心机制、源码剖析与实战</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2026-08-18T07:30:00.000Z">2026-08-18</time></p><p class="title"><a href="/2026/08/18/CLIP(1)/">多智能体隐空间通信与多模态 Memory：从 CLIP 表征对齐到 Latent 通信实践（1）</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2025-08-27T07:00:00.000Z">2025-08-27</time></p><p class="title"><a href="/2025/08/27/ROS2%E5%AE%9E%E6%88%981/">ROS2 实战</a></p><p class="categories"><a href="/categories/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/">自动驾驶</a></p></div></article></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">分类</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BB%8B%E7%BB%8D/"><span class="level-start"><span class="level-item">个人介绍</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/"><span class="level-start"><span class="level-item">技术分享</span></span><span class="level-end"><span class="level-item tag">17</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E6%95%99%E7%A8%8B/"><span class="level-start"><span class="level-item">教程</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%BC%80%E5%8F%91/"><span class="level-start"><span class="level-item">机器人开发</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/"><span class="level-start"><span class="level-item">自动驾驶</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">归档</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/archives/2026/09/"><span class="level-start"><span class="level-item">九月 2026</span></span><span class="level-end"><span class="level-item tag">2</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2026/08/"><span class="level-start"><span class="level-item">八月 2026</span></span><span class="level-end"><span class="level-item tag">2</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2025/08/"><span class="level-start"><span class="level-item">八月 2025</span></span><span class="level-end"><span class="level-item tag">2</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2025/05/"><span class="level-start"><span class="level-item">五月 2025</span></span><span class="level-end"><span class="level-item tag">13</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2024/12/"><span class="level-start"><span class="level-item">十二月 2024</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><a class="level is-mobile is-marginless" href="/archives/"><span class="level-start"><span class="level-item">查看全部&gt;&gt;</span></span></a></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">标签</h3><div class="field is-grouped is-grouped-multiline"><div class="control"><a class="tags has-addons" href="/tags/Python/"><span class="tag">Python</span><span class="tag is-grey-lightest">4</span></a></div><div class="control"><a class="tags has-addons" href="/tags/C/"><span class="tag">C++</span><span class="tag is-grey-lightest">3</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Multi-Agent/"><span class="tag">Multi-Agent</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/PyTorch/"><span class="tag">PyTorch</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/ROS2/"><span class="tag">ROS2</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E5%A4%9A%E6%A8%A1%E6%80%81/"><span class="tag">多模态</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%BC%80%E5%8F%91/"><span class="tag">嵌入式开发</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"><span class="tag">机器学习</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/"><span class="tag">深度学习</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E9%9A%90%E7%A9%BA%E9%97%B4%E9%80%9A%E4%BF%A1/"><span class="tag">隐空间通信</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/API/"><span class="tag">API</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Agent-Harness/"><span class="tag">Agent Harness</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/BP/"><span class="tag">BP</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/C-C/"><span class="tag">C++C</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/CLIP/"><span class="tag">CLIP</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/CNN/"><span class="tag">CNN</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/GPU/"><span class="tag">GPU</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Git/"><span class="tag">Git</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/HTTP/"><span class="tag">HTTP</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Hexo/"><span class="tag">Hexo</span><span class="tag is-grey-lightest">1</span></a></div></div><div class="field is-grouped is-grouped-multiline"><a class="tags has-addons" href="/tags/"><span class="tag">查看全部&gt;&gt;</span></a></div></div></div></div><div class="card widget" data-type="subscribe-email"><div class="card-content"><div class="menu"><h3 class="menu-label">订阅更新</h3><form action="https://feedburner.google.com/fb/a/mailverify" method="post" target="popupwindow" onsubmit="window.open(&#039;https://feedburner.google.com/fb/a/mailverify?uri=&#039;,&#039;popupwindow&#039;,&#039;scrollbars=yes,width=550,height=520&#039;);return true"><input type="hidden" value="" name="uri"><input type="hidden" name="loc" value="en_US"><div class="field has-addons"><div class="control has-icons-left is-expanded"><input class="input" name="email" type="email" placeholder="Email"><span class="icon is-small is-left"><i class="fas fa-envelope"></i></span></div><div class="control"><input class="button" type="submit" value="订阅"></div></div></form></div></div></div><!--!--><div class="column-right-shadow is-hidden-widescreen"></div></div></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/logo.svg" alt="GaryBlog" height="28"></a><p class="size-small"><span>&copy; 2026 Gary</span>  Powered by <a href="https://hexo.io/" target="_blank">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank">Icarus</a> &amp; <a href="https://github.com/removeif/hexo-theme-amazing" target="_blank">Amazing</a> <br><span>© 版权说明：[本网站所有内容均收集于互联网或自己创作,<br />&nbsp;&nbsp;&nbsp;&nbsp;方便于网友与自己学习交流，如有侵权，请<a href="/message" target="_blank">留言</a>，立即处理]<br /></span><span><span id="statistic-times">loading...</span><script>function createTime(time) {
+            var n = new Date(time);
+            now.setTime(now.getTime() + 250),
+                days = (now - n) / 1e3 / 60 / 60 / 24,
+                dnum = Math.floor(days),
+                hours = (now - n) / 1e3 / 60 / 60 - 24 * dnum,
+                hnum = Math.floor(hours),
+            1 == String(hnum).length && (hnum = "0" + hnum),
+                minutes = (now - n) / 1e3 / 60 - 1440 * dnum - 60 * hnum,
+                mnum = Math.floor(minutes),
+            1 == String(mnum).length && (mnum = "0" + mnum),
+                seconds = (now - n) / 1e3 - 86400 * dnum - 3600 * hnum - 60 * mnum,
+                snum = Math.round(seconds),
+            1 == String(snum).length && (snum = "0" + snum),
+                document.getElementById("statistic-times").innerHTML = "❤️本站自 <strong>"+time.split(" ")[0].replace(/\//g,".")+"</strong> 已运行 <strong>" + dnum + "</strong> 天 <strong>" + hnum + "</strong> 小时 <strong>" + mnum + "</strong> 分 <strong>" + snum + "</strong> 秒！❤️";
+        }var now = new Date();setInterval("createTime('2024/09/01 00:00:00')", 250,"");</script><br></span><div class="size-small"><span>❤️感谢 <strong><span id="busuanzi_value_site_uv">99+</span></strong> 小伙伴的 <strong><span id="busuanzi_value_site_pv">99+</span></strong> 次光临！❤️</span></div></p></div><div class="level-end"><div class="field has-addons"><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/removeif/hexo-theme-amazing"><i class="fab fa-github"></i></a></p></div><div class="sideMusic"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="/js/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/npm/meting@2/dist/Meting.min.js"></script><meting-js style="width: auto;height: 2000px;" server="netease" type="playlist" id="2364053447" theme="#2980b9" loop="all" autoplay="false" order="list" storageName="aplayer-setting" lrctype="0" list-max-height="400px" fixed="true"></meting-js></div></div></div></div></footer><script src="https://cdnjs.loli.net/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script><script src="https://cdnjs.loli.net/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" async></script><script>moment.locale("zh-cn");</script><script>var IcarusThemeSettings = {
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="/js/column.js"></script><script src="/js/animation.js"></script><a id="back-to-top" title="回到顶端" href="javascript:;"><i class="fas fa-chevron-up"></i></a><script src="/js/back_to_top.js" defer></script><!--!--><!--!--><!--!--><script src="https://cdnjs.loli.net/ajax/libs/lightgallery/1.10.0/js/lightgallery.min.js" defer></script><script src="https://cdnjs.loli.net/ajax/libs/justifiedGallery/3.8.1/js/jquery.justifiedGallery.min.js" defer></script><script>window.addEventListener("load", () => {
+            if (typeof $.fn.lightGallery === 'function') {
+                $('.article').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof $.fn.justifiedGallery === 'function') {
+                if ($('.justified-gallery > p > .gallery-item').length) {
+                    $('.justified-gallery > p > .gallery-item').unwrap();
+                }
+                $('.justified-gallery').justifiedGallery();
+            }
+        });</script><!--!--><!--!--><script type="text/javascript" id="MathJax-script" async>MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']]
+      },
+      svg: {
+        fontCache: 'global'
+      },
+      chtml: {
+        matchFontHeight: false
+      }
+    };</script><script src="https://cdnjs.loli.net/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script><!--!--><script src="/js/main.js" defer></script><script>$.getScript('/js/comment-issue-data.js',function(){loadIssueData('46a9f3481b46ea0129d8','79c7c9cb847e141757d7864453bcbf89f0655b24','Gray','blog_comment',false);})</script><div class="searchbox"><div class="searchbox-container"><div class="searchbox-header"><div class="searchbox-input-container"><input class="searchbox-input" type="text" placeholder="想要查找什么..."></div><a class="searchbox-close" href="javascript:;">×</a></div><div class="searchbox-body"></div></div></div><script data-pjax src="/js/insight.js" defer></script><script data-pjax>document.addEventListener('DOMContentLoaded', function () {
+            loadInsight({"contentUrl":"/content.json"}, {"hint":"想要查找什么...","untitled":"(无标题)","posts":"文章","pages":"页面","categories":"分类","tags":"标签"});
+        });</script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.js"></script><script type="text/javascript">var pjax = new Pjax({
+            elements: "a",//代表点击链接就更新
+            selectors: [  //代表要更新的节点
+                ".section",
+                "title"
+            ],
+            cache: true,
+            cacheBust:false
+        })
+
+        function loadBusuanzi(){
+        $.getScript("//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js", function () {});
+        }
+
+        function loadMathJax() { //加载mathjax
+            $.getScript("//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML", function () {
+                MathJax.Hub.Config({ tex2jax: { inlineMath: [['$', '$'], ['\(', '\)']] } });
+                var math = document.getElementsByClassName("entry-content")[0];
+                MathJax.Hub.Queue(["Typeset", MathJax.Hub, math]);
+            });
+        };
+
+        // 开始 PJAX 执行的函数
+        document.addEventListener('pjax:send', function () {
+        });
+        
+        // PJAX 完成之后执行的函数，可以和上面的重载放在一起
+        document.addEventListener('pjax:complete', function () {
+            $(".section").css({opacity:1});
+            if(true){
+                $.getScript('/js/comment-issue-data.js',function(){loadIssueData('46a9f3481b46ea0129d8','79c7c9cb847e141757d7864453bcbf89f0655b24','Gray','blog_comment',false);});
+            }
+            if(false){
+                loadMathJax();
+            }
+            loadMainJs(jQuery, window.moment, window.ClipboardJS, window.IcarusThemeSettings);
+            loadBackTop();
+            loadBusuanzi();
+            if(typeof loadBanner == 'function'){
+                loadBanner();
+            }
+        });</script></body></html>

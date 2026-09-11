@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>从SFT到LoRA：微调Qwen输出结构化JSON - GaryBlog</title><link rel="manifest" href="/manifest.json"><meta name="application-name" content="GaryBlog"><meta name="msapplication-TileImage" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/favicon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="GaryBlog"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="本文以一个“客服请求分类并输出 JSON”的小项目为例，介绍监督微调（SFT）的运行过程、LoRA 如何影响 Qwen 模型、labels&amp;#x3D;-100 的作用，以及 LoRA 如何修改 Transformer 的 Attention 与 MLP 计算。"><meta property="og:type" content="blog"><meta property="og:title" content="GaryBlog"><meta property="og:url" content="https://removeif.github.io/"><meta property="og:site_name" content="GaryBlog"><meta property="og:description" content="本文以一个“客服请求分类并输出 JSON”的小项目为例，介绍监督微调（SFT）的运行过程、LoRA 如何影响 Qwen 模型、labels&amp;#x3D;-100 的作用，以及 LoRA 如何修改 Transformer 的 Attention 与 MLP 计算。"><meta property="og:locale" content="zh_CN"><meta property="og:image" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/avatar.png"><meta property="article:published_time" content="2026-09-11T13:30:00.000Z"><meta property="article:modified_time" content="2026-09-11T13:56:14.376Z"><meta property="article:author" content="Gary"><meta property="article:tag" content="SFT"><meta property="article:tag" content="LoRA"><meta property="article:tag" content="Qwen"><meta property="article:tag" content="大模型微调"><meta property="twitter:card" content="summary"><meta property="twitter:image:src" content="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/avatar.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://garyaacm.github.io/2026/09/11/%E4%BB%8ESFT%E5%88%B0LoRA%E5%BE%AE%E8%B0%83Qwen/"},"headline":"GaryBlog","image":["https://garyaacm.github.io/img/og_image.png"],"datePublished":"2026-09-11T13:30:00.000Z","dateModified":"2026-09-11T13:56:14.376Z","author":{"@type":"Person","name":"Gary"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject"}},"description":"本文以一个“客服请求分类并输出 JSON”的小项目为例，介绍监督微调（SFT）的运行过程、LoRA 如何影响 Qwen 模型、labels&#x3D;-100 的作用，以及 LoRA 如何修改 Transformer 的 Attention 与 MLP 计算。"}</script><link rel="canonical" href="https://garyaacm.github.io/2026/09/11/%E4%BB%8ESFT%E5%88%B0LoRA%E5%BE%AE%E8%B0%83Qwen/"><link rel="icon" href="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/favicon.png"><meta name="referrer" content="no-referrer-when-downgrade"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/font-awesome/6.0.0/css/all.min.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/highlight.js/11.7.0/styles/atom-one-light.min.css"><link rel="stylesheet" href="https://fonts.loli.net/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/font-awesome/5.12.0/css/all.min.css"><link rel="stylesheet" href="https://fonts.loli.net/css?family=Ubuntu:400,600|Source+Code+Pro|Monda:300,300italic,400,400italic,700,700italic|Roboto Slab:300,300italic,400,400italic,700,700italic|Microsoft YaHei:300,300italic,400,400italic,700,700italic|PT Mono:300,300italic,400,400italic,700,700italic&amp;amp;subset=latin,latin-ext|Inconsolata|Itim|Lobster.css"><script src="https://cdnjs.loli.net/ajax/libs/jquery/3.3.1/jquery.min.js"></script><script src="/js/globalUtils.js"></script><style>body>.footer,body>.navbar,body>.section{opacity:0}</style><!--!--><!--!--><script src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" defer></script><!--!--><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/lightgallery/1.10.0/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/justifiedGallery/3.8.1/css/justifiedGallery.min.css"><!--!--><!--!--><!--!--><style>.pace{-webkit-pointer-events:none;pointer-events:none;-webkit-user-select:none;-moz-user-select:none;user-select:none}.pace-inactive{display:none}.pace .pace-progress{background:#3273dc;position:fixed;z-index:2000;top:0;right:100%;width:100%;height:2px}</style><script src="https://cdnjs.loli.net/ajax/libs/pace/1.2.4/pace.min.js"></script><link rel="stylesheet" href="/live2d/waifu.css"><script type="text/javascript" async src="/live2d/autoload.js"></script><!-- hexo injector head_end start --><script>
+  (function () {
+      function switchTab() {
+          if (!location.hash) {
+            return;
+          }
+
+          const id = '#' + CSS.escape(location.hash.substring(1));
+          const $tabMenu = document.querySelector(`.tabs a[href="${id}"]`);
+          if (!$tabMenu) {
+            return;
+          }
+
+          const $tabMenuContainer = $tabMenu.parentElement.parentElement;
+          Array.from($tabMenuContainer.children).forEach($menu => $menu.classList.remove('is-active'));
+          Array.from($tabMenuContainer.querySelectorAll('a'))
+              .map($menu => document.getElementById($menu.getAttribute("href").substring(1)))
+              .forEach($content => $content.classList.add('is-hidden'));
+
+          if ($tabMenu) {
+              $tabMenu.parentElement.classList.add('is-active');
+          }
+          const $activeTab = document.querySelector(id);
+          if ($activeTab) {
+              $activeTab.classList.remove('is-hidden');
+          }
+      }
+      switchTab();
+      window.addEventListener('hashchange', switchTab, false);
+  })();
+  </script><!-- hexo injector head_end end --><meta name="generator" content="Hexo 7.3.0"></head><body class="is-3-column has-navbar-fixed-top"><nav class="navbar navbar-main is-fixed-top"><div class="container navbar-container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/"><img src="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/logo.svg" alt="GaryBlog" height="28"></a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">Home</a><a class="navbar-item" href="/archives">Archives</a><a class="navbar-item" href="/categories">Categories</a><a class="navbar-item" href="/tags">Tags</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="noopener" title="Join Gitter" href="https://gitter.im/hexo-theme-amazing/community"><i class="fab fa-gitter"></i></a><a class="navbar-item" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/removeif/hexo-theme-amazing"><i class="fab fa-github"></i></a><a class="navbar-item search" title="搜索" href="javascript:;"><i class="fas fa-search"></i></a><a class="navbar-item" id="night-nav" title="Night Mode" href="javascript:;"><i class="fas fa-moon" id="night-icon"></i></a></div></div></div></nav><script type="text/javascript" src="/js/theme-setting.js"></script><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-8-tablet is-8-desktop is-9-widescreen"><!--!--><div class="card"><article class="card-content article" role="article"><div class="article-meta size-small is-uppercase level is-mobile"><div class="level-left"><i class="far fa-calendar-plus"> </i>2026-09-11  <a class="commentCountImg" href="/2026/09/11/%E4%BB%8ESFT%E5%88%B0LoRA%E5%BE%AE%E8%B0%83Qwen/#comment-container"><span class="display-none-class">9f1a92c0895d6d792d9cb2472b6b48ea</span><i class="far fa-comment-dots"></i> <span class="commentCount" id="9f1a92c0895d6d792d9cb2472b6b48ea">99+</span>  </a><span class="level-item"><i class="far fa-clock"> </i>25 分钟  <i class="fas fa-pencil-alt"> </i>3.7 k</span><span class="level-item" id="busuanzi_container_page_pv"><span id="busuanzi_value_page_pv">0</span>次访问</span></div></div><h1 class="title is-3 is-size-4-mobile">从SFT到LoRA：微调Qwen输出结构化JSON</h1><div class="content"><blockquote>
+<p>本文以一个“客服请求分类并输出 JSON”的小项目为例，介绍监督微调（SFT）的运行过程、LoRA 如何影响 Qwen 模型、<code>labels=-100</code> 的作用，以及 LoRA 如何修改 Transformer 的 Attention 与 MLP 计算。</p>
+</blockquote>
+<span id="more"></span>
+
+<h1 id="从SFT到LoRA：微调Qwen输出结构化JSON"><a href="#从SFT到LoRA：微调Qwen输出结构化JSON" class="headerlink" title="从SFT到LoRA：微调Qwen输出结构化JSON"></a>从SFT到LoRA：微调Qwen输出结构化JSON</h1><hr>
+<h2 id="一、项目目标"><a href="#一、项目目标" class="headerlink" title="一、项目目标"></a>一、项目目标</h2><p>本文实现的是一个很小的监督微调（Supervised Fine-Tuning，SFT）任务。给定一条中文客服请求，模型需要输出严格的 JSON：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;intent&quot;</span><span class="punctuation">:</span> <span class="string">&quot;shipping&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;urgency&quot;</span><span class="punctuation">:</span> <span class="string">&quot;high&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;reply&quot;</span><span class="punctuation">:</span> <span class="string">&quot;我们会优先核查物流情况。&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<ol>
+<li><code>intent</code> 表示请求类型，例如物流、退款、账户、支付；</li>
+<li><code>urgency</code> 表示紧急程度，例如 <code>high</code>、<code>medium</code>、<code>low</code>；</li>
+<li><code>reply</code> 是一段简短的客服回复。</li>
+</ol>
+<p>本实验使用 <code>Qwen/Qwen2.5-0.5B-Instruct</code> 作为基础模型，使用 LoRA 进行参数高效微调。训练集有 48 条样本，验证集有 12 条样本。这个规模不用于训练实用客服系统，而是用于完整跑通 SFT 的数据处理、训练、推理与评测流程。</p>
+<p>整体流程如下：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">JSONL 训练数据</span><br><span class="line">    ↓</span><br><span class="line">构造成 Qwen 的 system / user / assistant 对话</span><br><span class="line">    ↓</span><br><span class="line">Tokenizer 将文本转换为 token ID</span><br><span class="line">    ↓</span><br><span class="line">只对 assistant 的 JSON 答案计算 loss</span><br><span class="line">    ↓</span><br><span class="line">Qwen 基础模型 + LoRA adapter</span><br><span class="line">    ↓</span><br><span class="line">反向传播，只更新 LoRA 参数</span><br><span class="line">    ↓</span><br><span class="line">保存 adapter，并在验证集上评测</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="二、运行环境与项目结构"><a href="#二、运行环境与项目结构" class="headerlink" title="二、运行环境与项目结构"></a>二、运行环境与项目结构</h2><p>本实验在单张 RTX 4090D 24GB GPU 上运行。该显卡支持 BF16，因此可以在减少显存占用的同时保持较好的训练稳定性。TensorRT 不参与本次训练，训练使用的是 PyTorch、Transformers 和 PEFT。</p>
+<p>项目目录如下：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">sft_json_task/</span><br><span class="line">├── data/</span><br><span class="line">│   ├── train.jsonl       # 48 条训练样本</span><br><span class="line">│   └── valid.jsonl       # 12 条验证样本</span><br><span class="line">├── train_sft.py          # SFT 训练脚本</span><br><span class="line">├── infer.py              # 单条样本推理脚本</span><br><span class="line">├── evaluate.py           # 验证集评测脚本</span><br><span class="line">├── requirements.txt      # Python 依赖</span><br><span class="line">└── run_train.sh          # 训练启动脚本</span><br></pre></td></tr></table></figure>
+
+<p>安装依赖：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">python -m venv .venv</span><br><span class="line"><span class="built_in">source</span> .venv/bin/activate</span><br><span class="line">python -m pip install -U pip</span><br><span class="line">python -m pip install -r requirements.txt</span><br></pre></td></tr></table></figure>
+
+<p>如果服务器上 Python 位于 Conda 目录，可替换为对应路径，例如：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">/root/miniconda3/bin/python -m venv .venv</span><br><span class="line"><span class="built_in">source</span> .venv/bin/activate</span><br></pre></td></tr></table></figure>
+
+<p>训练启动命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">unset</span> OMP_NUM_THREADS</span><br><span class="line"><span class="built_in">export</span> OMP_NUM_THREADS=8</span><br><span class="line">bash run_train.sh</span><br></pre></td></tr></table></figure>
+
+<p>若服务器访问 Hugging Face 较慢，可以使用镜像和更长的下载超时：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> HF_ENDPOINT=https://hf-mirror.com</span><br><span class="line"><span class="built_in">export</span> HF_HUB_ETAG_TIMEOUT=120</span><br><span class="line"><span class="built_in">export</span> HF_HUB_DOWNLOAD_TIMEOUT=120</span><br><span class="line">bash run_train.sh</span><br></pre></td></tr></table></figure>
+
+<p>模型首次运行时会下载 tokenizer、配置文件和约 988MB 的模型权重；之后会优先读取本地缓存。</p>
+<hr>
+<h2 id="三、训练数据是什么样的"><a href="#三、训练数据是什么样的" class="headerlink" title="三、训练数据是什么样的"></a>三、训练数据是什么样的</h2><p>训练数据采用 JSON Lines 格式，也就是“一行一个 JSON 对象”。一条样本如下：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;instruction&quot;</span><span class="punctuation">:</span> <span class="string">&quot;请判断这条客服请求的意图和紧急程度，并只输出 JSON。&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;input&quot;</span><span class="punctuation">:</span> <span class="string">&quot;我的包裹已经签收但没有收到，明天要用。&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;output&quot;</span><span class="punctuation">:</span> <span class="string">&quot;&#123;\&quot;intent\&quot;:\&quot;shipping\&quot;,\&quot;urgency\&quot;:\&quot;high\&quot;,\&quot;reply\&quot;:\&quot;我们会立即核查签收记录并联系配送方处理。\&quot;&#125;&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>训练脚本要求每条数据必须有三个字段：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> key <span class="keyword">in</span> (<span class="string">&quot;instruction&quot;</span>, <span class="string">&quot;input&quot;</span>, <span class="string">&quot;output&quot;</span>):</span><br><span class="line">    <span class="keyword">if</span> key <span class="keyword">not</span> <span class="keyword">in</span> row:</span><br><span class="line">        <span class="keyword">raise</span> ValueError(...)</span><br></pre></td></tr></table></figure>
+
+<p>这样的检查能尽早发现数据格式问题，避免模型训练到一半才因为缺字段报错。</p>
+<p>本实验包括以下意图：</p>
+<table>
+<thead>
+<tr>
+<th>intent</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>shipping</code></td>
+<td>发货、物流、签收、修改收货地址</td>
+</tr>
+<tr>
+<td><code>refund</code></td>
+<td>退货、退款、商品质量问题</td>
+</tr>
+<tr>
+<td><code>cancel</code></td>
+<td>取消订单</td>
+</tr>
+<tr>
+<td><code>account</code></td>
+<td>登录、验证码、账户安全</td>
+</tr>
+<tr>
+<td><code>technical</code></td>
+<td>App、网页、上传、支付页面故障</td>
+</tr>
+<tr>
+<td><code>payment</code></td>
+<td>扣款、支付方式、账单金额</td>
+</tr>
+</tbody></table>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">“包裹签收但没有收到，明天急用” → shipping + high</span><br><span class="line">“退款通常几天到账” → refund + low</span><br><span class="line">“银行卡被重复扣款” → payment + high</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、训练脚本是怎样运行的"><a href="#四、训练脚本是怎样运行的" class="headerlink" title="四、训练脚本是怎样运行的"></a>四、训练脚本是怎样运行的</h2><p>训练入口是：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    main()</span><br></pre></td></tr></table></figure>
+
+<p>直接运行 <code>python train_sft.py</code> 时，Python 会执行 <code>main()</code>。<code>main()</code> 的主要步骤如下。</p>
+<h3 id="1-读取命令行参数"><a href="#1-读取命令行参数" class="headerlink" title="1. 读取命令行参数"></a>1. 读取命令行参数</h3><p>脚本通过 <code>argparse</code> 读取训练参数：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">parser.add_argument(<span class="string">&quot;--model_name&quot;</span>, default=<span class="string">&quot;Qwen/Qwen2.5-0.5B-Instruct&quot;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--max_length&quot;</span>, <span class="built_in">type</span>=<span class="built_in">int</span>, default=<span class="number">512</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--num_train_epochs&quot;</span>, <span class="built_in">type</span>=<span class="built_in">float</span>, default=<span class="number">5.0</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--learning_rate&quot;</span>, <span class="built_in">type</span>=<span class="built_in">float</span>, default=<span class="number">2e-4</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--train_batch_size&quot;</span>, <span class="built_in">type</span>=<span class="built_in">int</span>, default=<span class="number">4</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--gradient_accumulation_steps&quot;</span>, <span class="built_in">type</span>=<span class="built_in">int</span>, default=<span class="number">4</span>)</span><br></pre></td></tr></table></figure>
+
+<p>启动脚本实际传入的核心参数是：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">python train_sft.py \</span><br><span class="line">  --model_name Qwen/Qwen2.5-0.5B-Instruct \</span><br><span class="line">  --num_train_epochs 5 \</span><br><span class="line">  --max_length 512 \</span><br><span class="line">  --train_batch_size 4 \</span><br><span class="line">  --gradient_accumulation_steps 4 \</span><br><span class="line">  --precision auto</span><br></pre></td></tr></table></figure>
+
+<p><code>train_batch_size=4</code> 表示每次前向与反向计算处理 4 条样本；<code>gradient_accumulation_steps=4</code> 表示累计 4 次梯度后才更新一次参数。</p>
+<p>因此有效 batch size 为：</p>
+<p>$$<br>4 \times 4 &#x3D; 16<br>$$</p>
+<p>训练集共有 48 条数据，因此每个 epoch 中：</p>
+<p>$$<br>48 &#x2F; 4 &#x3D; 12 	ext{个 micro-batch}<br>$$</p>
+<p>$$<br>12 &#x2F; 4 &#x3D; 3 	ext{次参数更新}<br>$$</p>
+<p>训练 5 个 epoch，共约 15 次 optimizer update。这就是训练进度中 <code>0/15</code>、<code>15/15</code> 的来源。</p>
+<h3 id="2-读取数据并设置随机种子"><a href="#2-读取数据并设置随机种子" class="headerlink" title="2. 读取数据并设置随机种子"></a>2. 读取数据并设置随机种子</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">set_seed(args.seed)</span><br><span class="line">random.seed(args.seed)</span><br><span class="line"></span><br><span class="line">train_rows = read_jsonl(args.train_file)</span><br><span class="line">valid_rows = read_jsonl(args.valid_file)</span><br></pre></td></tr></table></figure>
+
+<p>随机种子默认是 42。它能使数据顺序、初始化和部分随机操作尽量保持一致，便于复现实验。</p>
+<h3 id="3-构造对话格式"><a href="#3-构造对话格式" class="headerlink" title="3. 构造对话格式"></a>3. 构造对话格式</h3><p>Qwen-Instruct 是聊天模型，因此不能简单把用户问题和答案直接拼接。脚本把每条样本构造成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">system：你是一个客服请求分类器。请严格只输出一个 JSON 对象……</span><br><span class="line">user：请判断这条客服请求的意图和紧急程度，并只输出 JSON。</span><br><span class="line">      用户请求：我的包裹已经签收但没有收到，明天要用。</span><br><span class="line">assistant：&#123;&quot;intent&quot;:&quot;shipping&quot;,&quot;urgency&quot;:&quot;high&quot;,&quot;reply&quot;:&quot;……&quot;&#125;</span><br></pre></td></tr></table></figure>
+
+<p>对应代码为：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">prompt = [</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;system&quot;</span>, <span class="string">&quot;content&quot;</span>: SYSTEM_PROMPT&#125;,</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: user_text&#125;,</span><br><span class="line">]</span><br><span class="line">full = prompt + [&#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;assistant&quot;</span>, <span class="string">&quot;content&quot;</span>: row[<span class="string">&quot;output&quot;</span>]&#125;]</span><br></pre></td></tr></table></figure>
+
+<p>之后使用：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tokenizer.apply_chat_template(...)</span><br></pre></td></tr></table></figure>
+
+<p>将 <code>system</code>、<code>user</code>、<code>assistant</code> 转换为 Qwen 训练时使用的特殊 token 格式。使用官方 Chat Template 的好处是避免手工拼接特殊标记时出现格式不兼容。</p>
+<hr>
+<h2 id="五、SFT-到底在优化什么"><a href="#五、SFT-到底在优化什么" class="headerlink" title="五、SFT 到底在优化什么"></a>五、SFT 到底在优化什么</h2><p>语言模型不是一次性预测整个 JSON，而是逐个预测下一个 token。假设目标输出是：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;intent&quot;</span><span class="punctuation">:</span><span class="string">&quot;shipping&quot;</span><span class="punctuation">,</span><span class="attr">&quot;urgency&quot;</span><span class="punctuation">:</span><span class="string">&quot;high&quot;</span><span class="punctuation">,</span><span class="attr">&quot;reply&quot;</span><span class="punctuation">:</span><span class="string">&quot;...&quot;</span><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>模型会依次学习预测：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#123; → &quot; → intent → &quot; → : → &quot; → shipping → &quot; → , → ...</span><br></pre></td></tr></table></figure>
+
+<p>设标准答案 token 序列为 (y_1, y_2, …, y_T)，模型对第 (t) 个 token 的预测概率为 (P_\theta(y_t | y_{&lt;t}, x))。SFT 的交叉熵损失可以写成：</p>
+<p>$$<br>\mathcal{L}<em>{SFT} &#x3D; - \sum</em>{t&#x3D;1}^{T} \log P_\theta(y_t | y_{&lt;t}, x)<br>$$</p>
+<p>其中 (x) 表示 system prompt 和用户请求。</p>
+<p>若模型在“包裹签收但未收到”的样本上错误地倾向生成 <code>refund</code>，则 <code>shipping</code> 对应 token 的概率较低，loss 会增大。反向传播将调整 LoRA 参数，使模型在类似输入下更倾向输出 <code>shipping</code>。</p>
+<hr>
+<h2 id="六、labels-中-prompt-为-100-是什么意思"><a href="#六、labels-中-prompt-为-100-是什么意思" class="headerlink" title="六、labels 中 prompt 为 -100 是什么意思"></a>六、<code>labels</code> 中 prompt 为 <code>-100</code> 是什么意思</h2><p>训练数据最终会变为三个字段：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    <span class="string">&quot;input_ids&quot;</span>: ... ,</span><br><span class="line">    <span class="string">&quot;attention_mask&quot;</span>: ... ,</span><br><span class="line">    <span class="string">&quot;labels&quot;</span>: ... ,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>它们的职责不同：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>input_ids</code></td>
+<td>模型实际看到的全部 token</td>
+</tr>
+<tr>
+<td><code>attention_mask</code></td>
+<td>哪些位置是真实文本，哪些是 padding</td>
+</tr>
+<tr>
+<td><code>labels</code></td>
+<td>哪些位置需要与标准答案比较并计算 loss</td>
+</tr>
+</tbody></table>
+<p>对于一段完整对话：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[system prompt] + [user request] + [assistant JSON]</span><br></pre></td></tr></table></figure>
+
+<p>脚本会构造：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">labels = [-<span class="number">100</span>] * <span class="built_in">len</span>(prompt_ids)</span><br><span class="line">labels += answer_token_ids</span><br></pre></td></tr></table></figure>
+
+<p>于是 <code>labels</code> 的概念形式为：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[-100, -100, ..., -100, &quot;&#123;&quot;, &quot;intent&quot;, &quot;:&quot;, &quot;shipping&quot;, ...]</span><br></pre></td></tr></table></figure>
+
+<p>在 PyTorch 的交叉熵损失中，<code>-100</code> 是默认的忽略标记 <code>ignore_index</code>：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">label = -100</span><br><span class="line">→ 该位置不计算 loss</span><br><span class="line">→ 该位置不产生训练梯度</span><br></pre></td></tr></table></figure>
+
+<p>因此，system prompt 和用户请求不会成为模型需要“复述”的训练目标；只有 assistant 的 JSON 会参与 loss。这个方式称为：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">response-only loss</span><br></pre></td></tr></table></figure>
+
+<p>或：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">completion-only training</span><br></pre></td></tr></table></figure>
+
+<p>需要注意，<code>labels=-100</code> 不代表模型看不到 prompt。Prompt 仍在 <code>input_ids</code> 中，且 <code>attention_mask</code> 为 1。模型仍会利用其中的指令与用户问题进行 Attention，只是不会因为“没有预测好 prompt 本身”而被扣分。</p>
+<p>可以简单区分为：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">input_ids：模型看什么</span><br><span class="line">labels：模型为了什么答案被计算误差</span><br></pre></td></tr></table></figure>
+
+<p>若不屏蔽 prompt，模型会将大量训练能力用于复述 system prompt 与用户问题，assistant 答案获得的监督比例会变小，训练目标也会偏离“根据问题生成答案”。</p>
+<hr>
+<h2 id="七、什么是-LoRA"><a href="#七、什么是-LoRA" class="headerlink" title="七、什么是 LoRA"></a>七、什么是 LoRA</h2><p>全参数微调会直接更新模型中的每一个权重。假设某个线性层的输入为 (x)，权重为 (W)，输出为：</p>
+<p>$$<br>y &#x3D; xW^T<br>$$</p>
+<p>全量微调后，权重变成：</p>
+<p>$$<br>W’ &#x3D; W + \Delta W<br>$$</p>
+<p>其中 (\Delta W) 与 (W) 一样大，需要训练大量参数。</p>
+<p>LoRA（Low-Rank Adaptation）不直接训练完整的 (\Delta W)，而是假设有效更新可以由低秩矩阵近似：</p>
+<p>$$<br>\Delta W &#x3D; BA<br>$$</p>
+<p>于是线性层变为：</p>
+<p>$$<br>y &#x3D; xW^T + \frac{\alpha}{r}x(BA)^T<br>$$</p>
+<p>其中：</p>
+<ol>
+<li>(W) 是基础模型的原始权重，训练时被冻结；</li>
+<li>(A)、(B) 是 LoRA 新增的小矩阵，训练时更新；</li>
+<li>(r) 是低秩维度；</li>
+<li>(\alpha &#x2F; r) 是缩放系数。</li>
+</ol>
+<p>本项目的 LoRA 配置如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">lora_config = LoraConfig(</span><br><span class="line">    r=<span class="number">16</span>,</span><br><span class="line">    lora_alpha=<span class="number">32</span>,</span><br><span class="line">    lora_dropout=<span class="number">0.05</span>,</span><br><span class="line">    target_modules=[</span><br><span class="line">        <span class="string">&quot;q_proj&quot;</span>, <span class="string">&quot;k_proj&quot;</span>, <span class="string">&quot;v_proj&quot;</span>, <span class="string">&quot;o_proj&quot;</span>,</span><br><span class="line">        <span class="string">&quot;gate_proj&quot;</span>, <span class="string">&quot;up_proj&quot;</span>, <span class="string">&quot;down_proj&quot;</span></span><br><span class="line">    ],</span><br><span class="line">    bias=<span class="string">&quot;none&quot;</span>,</span><br><span class="line">    task_type=<span class="string">&quot;CAUSAL_LM&quot;</span>,</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>这里：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">r = 16</span><br><span class="line">alpha = 32</span><br><span class="line">scale = alpha / r = 2</span><br></pre></td></tr></table></figure>
+
+<p>假设某个线性层权重维度为 (896 \times 896)。全量更新需要：</p>
+<p>$$<br>896 \times 896 &#x3D; 802,816<br>$$</p>
+<p>个参数。若 LoRA 的 (r&#x3D;16)，则只训练：</p>
+<p>$$<br>16 \times 896 + 896 \times 16 &#x3D; 28,672<br>$$</p>
+<p>个参数。</p>
+<p>因此，LoRA 不会复制并修改完整的大权重，而是在原始计算旁边增加一条较小的可训练分支：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">原始线性层输出 = base_linear(x)</span><br><span class="line">LoRA 分支输出  = B(A(dropout(x))) × scale</span><br><span class="line">最终输出      = 原始输出 + LoRA 分支输出</span><br></pre></td></tr></table></figure>
+
+<p>在本实验的日志中，可以看到：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">trainable params: 8,798,208</span><br><span class="line">all params: 502,830,976</span><br><span class="line">trainable%: 1.7497</span><br></pre></td></tr></table></figure>
+
+<p>模型总参数约 5.03 亿，但实际更新的 LoRA 参数约 880 万，只占 1.75%。</p>
+<hr>
+<h2 id="八、训练很少参数，为什么-LoRA-仍然有效"><a href="#八、训练很少参数，为什么-LoRA-仍然有效" class="headerlink" title="八、训练很少参数，为什么 LoRA 仍然有效"></a>八、训练很少参数，为什么 LoRA 仍然有效</h2><p>LoRA 训练参数少，不代表它影响很小。主要原因有以下三点。</p>
+<h3 id="1-基础模型已经具备通用能力"><a href="#1-基础模型已经具备通用能力" class="headerlink" title="1. 基础模型已经具备通用能力"></a>1. 基础模型已经具备通用能力</h3><p>Qwen 本来已经能理解中文、识别“退款”“签收”“扣款”等词，也具备生成 JSON 与客服语言的基础能力。</p>
+<p>当前任务不是从零教模型学习语言，而是让它更稳定地完成特定映射：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">“签收但未收到” → shipping + high</span><br><span class="line">“退款多久到账” → refund + low</span><br><span class="line">“重复扣款” → payment + high</span><br></pre></td></tr></table></figure>
+
+<p>这类任务通常不需要重写整个模型，只需调整模型调用已有知识时的偏好和输出概率。</p>
+<h3 id="2-有效更新往往位于少数方向"><a href="#2-有效更新往往位于少数方向" class="headerlink" title="2. 有效更新往往位于少数方向"></a>2. 有效更新往往位于少数方向</h3><p>全量微调允许 (\Delta W) 在所有方向上变化。LoRA 限制 (\Delta W &#x3D; BA)，只能沿低秩空间的少数主要方向变化。</p>
+<p>对于“将一个通用聊天模型适配为结构化客服分类器”这样的窄任务，这些方向往往已经足够。</p>
+<p>当然，LoRA 也有边界。如果任务与基础模型差异极大、需要学习大量新领域知识，或低秩 (r) 设得过小，则可以提高 <code>r</code>、扩展目标层、增加数据，或者考虑全参数微调。</p>
+<h3 id="3-LoRA-分布在多层关键路径中"><a href="#3-LoRA-分布在多层关键路径中" class="headerlink" title="3. LoRA 分布在多层关键路径中"></a>3. LoRA 分布在多层关键路径中</h3><p>本项目并非只在输出层加入一个小分类器，而是在每一层 Transformer 的 Attention 和 MLP 中加入 LoRA。每层的小变化会逐层累积，最终能够明显改变输出 token 的概率分布。</p>
+<p>因此，“训练参数只有 1.75%”描述的是参数数量，不等于“只影响 1.75% 的模型功能”。</p>
+<hr>
+<h2 id="九、Transformer-Attention-原本如何计算"><a href="#九、Transformer-Attention-原本如何计算" class="headerlink" title="九、Transformer Attention 原本如何计算"></a>九、Transformer Attention 原本如何计算</h2><p>设一层 Transformer 的输入为 (X)，Attention 会先通过三组线性投影计算 Query、Key、Value：</p>
+<p>$$<br>Q &#x3D; XW_Q^T<br>$$</p>
+<p>$$<br>K &#x3D; XW_K^T<br>$$</p>
+<p>$$<br>V &#x3D; XW_V^T<br>$$</p>
+<p>之后计算注意力权重：</p>
+<p>$$<br>A &#x3D; \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)<br>$$</p>
+<p>最后使用注意力权重加权 Value，并经过输出投影：</p>
+<p>$$<br>O &#x3D; AVW_O^T<br>$$</p>
+<p>可以直观理解为：</p>
+<table>
+<thead>
+<tr>
+<th>部分</th>
+<th>直观含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Query（Q）</td>
+<td>当前 token 想寻找什么信息</td>
+</tr>
+<tr>
+<td>Key（K）</td>
+<td>每个位置可以提供什么索引线索</td>
+</tr>
+<tr>
+<td>Value（V）</td>
+<td>每个位置实际携带的内容</td>
+</tr>
+<tr>
+<td>QK<sup>T</sup></td>
+<td>当前 token 应该关注哪些位置</td>
+</tr>
+<tr>
+<td>Output（O）</td>
+<td>将注意到的信息写回模型主表示</td>
+</tr>
+</tbody></table>
+<p>当模型要输出：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">&quot;urgency&quot;</span><span class="punctuation">:</span> <span class="string">&quot;high&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>它应该更关注用户请求中的“明天要用”“立即”“被盗”“重复扣款”等紧急线索。</p>
+<hr>
+<h2 id="十、LoRA-是怎样修改-Attention-的"><a href="#十、LoRA-是怎样修改-Attention-的" class="headerlink" title="十、LoRA 是怎样修改 Attention 的"></a>十、LoRA 是怎样修改 Attention 的</h2><p>代码中：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">target_modules = [<span class="string">&quot;q_proj&quot;</span>, <span class="string">&quot;k_proj&quot;</span>, <span class="string">&quot;v_proj&quot;</span>, <span class="string">&quot;o_proj&quot;</span>, ...]</span><br></pre></td></tr></table></figure>
+
+<p>说明 LoRA 被插入到 Attention 的四个线性投影层。原本：</p>
+<p>$$<br>Q &#x3D; XW_Q^T<br>$$</p>
+<p>加入 LoRA 后，概念上变为：</p>
+<p>$$<br>Q &#x3D; X(W_Q + \Delta W_Q)^T<br>$$</p>
+<p>其中：</p>
+<p>$$<br>\Delta W_Q &#x3D; B_QA_Q<br>$$</p>
+<p>同理：</p>
+<p>$$<br>K &#x3D; X(W_K + B_KA_K)^T<br>$$</p>
+<p>$$<br>V &#x3D; X(W_V + B_VA_V)^T<br>$$</p>
+<p>输出投影也会加入自己的低秩增量：</p>
+<p>$$<br>O &#x3D; AV(W_O + B_OA_O)^T<br>$$</p>
+<p>在 PEFT 的实际实现中，逻辑可以近似理解为：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">original_output = base_linear(x)       <span class="comment"># 冻结的 Qwen 原权重</span></span><br><span class="line">lora_output = lora_B(lora_A(x))       <span class="comment"># 可训练的小分支</span></span><br><span class="line">output = original_output + scale * lora_output</span><br></pre></td></tr></table></figure>
+
+<p>反向传播时：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Qwen 原始 Wq / Wk / Wv / Wo：冻结，不更新</span><br><span class="line">LoRA 的 A / B 矩阵：接收梯度并更新</span><br></pre></td></tr></table></figure>
+
+<p>不同投影层的改动可以这样理解：</p>
+<h3 id="1-q-proj：修改“当前-token-想找什么”"><a href="#1-q-proj：修改“当前-token-想找什么”" class="headerlink" title="1. q_proj：修改“当前 token 想找什么”"></a>1. <code>q_proj</code>：修改“当前 token 想找什么”</h3><p><code>q_proj</code> 决定 Query。LoRA 可以让模型在生成 <code>urgency</code> 时，更主动查询“明天”“马上”“紧急”“被盗”等线索。</p>
+<h3 id="2-k-proj：修改“什么信息更容易被注意到”"><a href="#2-k-proj：修改“什么信息更容易被注意到”" class="headerlink" title="2. k_proj：修改“什么信息更容易被注意到”"></a>2. <code>k_proj</code>：修改“什么信息更容易被注意到”</h3><p><code>k_proj</code> 决定 Key。LoRA 可以让“验证码”“无法登录”“账户被盗”等文本在生成 <code>intent: account</code> 时更容易成为注意力匹配的目标。</p>
+<h3 id="3-v-proj：修改“被取出的语义内容”"><a href="#3-v-proj：修改“被取出的语义内容”" class="headerlink" title="3. v_proj：修改“被取出的语义内容”"></a>3. <code>v_proj</code>：修改“被取出的语义内容”</h3><p><code>v_proj</code> 决定 Value。即使模型已经注意到“支付成功但页面失败”，仍要决定从这段文字中提取哪些表示。LoRA 可以强化“支付异常”“避免重复支付”“需要优先处理”等语义。</p>
+<h3 id="4-o-proj：修改“注意力结果如何影响后续层”"><a href="#4-o-proj：修改“注意力结果如何影响后续层”" class="headerlink" title="4. o_proj：修改“注意力结果如何影响后续层”"></a>4. <code>o_proj</code>：修改“注意力结果如何影响后续层”</h3><p><code>o_proj</code> 将多头 Attention 的结果写回残差流。对它加入 LoRA，会改变模型如何将注意到的上下文信息传递给后续 MLP、下一层 Attention 和最终的 token 预测。</p>
+<p>因此 LoRA 对 Attention 的影响不是硬编码规则，而是通过调整 Q、K、V、O 的连续向量表示，使某些上下文线索在生成对应类别时更容易被利用。</p>
+<hr>
+<h2 id="十一、LoRA-还修改了-MLP"><a href="#十一、LoRA-还修改了-MLP" class="headerlink" title="十一、LoRA 还修改了 MLP"></a>十一、LoRA 还修改了 MLP</h2><p>本项目的目标模块不止 Attention：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[<span class="string">&quot;q_proj&quot;</span>, <span class="string">&quot;k_proj&quot;</span>, <span class="string">&quot;v_proj&quot;</span>, <span class="string">&quot;o_proj&quot;</span>,</span><br><span class="line"> <span class="string">&quot;gate_proj&quot;</span>, <span class="string">&quot;up_proj&quot;</span>, <span class="string">&quot;down_proj&quot;</span>]</span><br></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>所属部分</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>q_proj</code>、<code>k_proj</code>、<code>v_proj</code>、<code>o_proj</code></td>
+<td>Attention</td>
+<td>选择和聚合上下文信息</td>
+</tr>
+<tr>
+<td><code>up_proj</code></td>
+<td>MLP</td>
+<td>将隐藏表示扩展到更高维空间</td>
+</tr>
+<tr>
+<td><code>gate_proj</code></td>
+<td>MLP</td>
+<td>控制哪些特征被放大或抑制</td>
+</tr>
+<tr>
+<td><code>down_proj</code></td>
+<td>MLP</td>
+<td>将计算结果投影回隐藏维度</td>
+</tr>
+</tbody></table>
+<p>Qwen 的 MLP 可以粗略表示为：</p>
+<p>$$<br>H &#x3D; \text{activation}(XW_{up}^T) \odot \text{gate}(XW_{gate}^T)<br>$$</p>
+<p>$$<br>Y &#x3D; HW_{down}^T<br>$$</p>
+<p>对 <code>up_proj</code>、<code>gate_proj</code>、<code>down_proj</code> 加 LoRA，意味着模型不仅改变“关注输入中的什么信息”，还改变“获得信息后如何加工、筛选和组合这些特征”。</p>
+<p>因此，这个项目训练的不是一个额外接在最后的分类头，而是让 Transformer 每一层的 Attention 和 MLP 都发生轻量、分布式的任务适配。</p>
+<hr>
+<h2 id="十二、Trainer-如何完成训练"><a href="#十二、Trainer-如何完成训练" class="headerlink" title="十二、Trainer 如何完成训练"></a>十二、Trainer 如何完成训练</h2><p>训练脚本使用 Hugging Face 的 <code>Trainer</code>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">trainer = Trainer(</span><br><span class="line">    model=model,</span><br><span class="line">    args=training_args,</span><br><span class="line">    train_dataset=train_dataset,</span><br><span class="line">    eval_dataset=valid_dataset,</span><br><span class="line">    data_collator=CausalLMCollator(tokenizer.pad_token_id),</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">trainer.train()</span><br></pre></td></tr></table></figure>
+
+<p>每个训练 batch 内部大致执行：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">1. 取出一批 input_ids、attention_mask、labels</span><br><span class="line">2. Qwen + LoRA 前向计算，输出每个位置的 token logits</span><br><span class="line">3. 忽略 labels=-100 的 prompt 位置</span><br><span class="line">4. 仅对 assistant JSON 的 token 计算交叉熵 loss</span><br><span class="line">5. loss.backward() 反向传播</span><br><span class="line">6. 将梯度累积 4 个 micro-batch</span><br><span class="line">7. AdamW 更新 LoRA 的 A/B 矩阵</span><br><span class="line">8. 每个 epoch 后在验证集计算 eval_loss 并保存 checkpoint</span><br></pre></td></tr></table></figure>
+
+<p>训练参数中：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">evaluation_strategy=<span class="string">&quot;epoch&quot;</span></span><br><span class="line">save_strategy=<span class="string">&quot;epoch&quot;</span></span><br><span class="line">load_best_model_at_end=<span class="literal">True</span></span><br><span class="line">metric_for_best_model=<span class="string">&quot;eval_loss&quot;</span></span><br><span class="line">greater_is_better=<span class="literal">False</span></span><br></pre></td></tr></table></figure>
+
+<p>表示每轮训练结束后都进行验证和保存，最后自动恢复验证集 loss 最低的 checkpoint，而不一定使用最后一轮的模型。</p>
+<p>对于这个 0.5B 小模型，训练脚本将：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gradient_checkpointing=<span class="literal">False</span></span><br></pre></td></tr></table></figure>
+
+<p>设为关闭。原因是 4090D 24GB 显存足以训练该任务，并且在某些“冻结基础模型 + LoRA”配置中，开启 gradient checkpointing 可能出现 <code>loss does not require grad</code> 一类梯度图错误。</p>
+<hr>
+<h2 id="十三、如何推理与评测"><a href="#十三、如何推理与评测" class="headerlink" title="十三、如何推理与评测"></a>十三、如何推理与评测</h2><p>训练完成后，LoRA adapter 和 tokenizer 会保存在：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">outputs/qwen25-0.5b-json-lora</span><br></pre></td></tr></table></figure>
+
+<p>该目录主要保存 adapter，不会复制完整的 Qwen 基础权重。推理时需要组合：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Qwen 基础模型 + 训练后的 LoRA adapter</span><br></pre></td></tr></table></figure>
+
+<p>单条推理：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">python infer.py \</span><br><span class="line">  --adapter_dir outputs/qwen25-0.5b-json-lora \</span><br><span class="line">  --text <span class="string">&quot;我的包裹显示已经签收，但我没有收到，明天急用，怎么办？&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>推理脚本的核心加载过程：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">base = AutoModelForCausalLM.from_pretrained(args.model_name)</span><br><span class="line">model = PeftModel.from_pretrained(base, args.adapter_dir)</span><br></pre></td></tr></table></figure>
+
+<p>其中 <code>base</code> 是未修改的基础 Qwen，<code>PeftModel.from_pretrained</code> 将 LoRA adapter 挂载回对应层。</p>
+<p>脚本设置：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">do_sample=<span class="literal">False</span></span><br></pre></td></tr></table></figure>
+
+<p>表示使用确定性生成。对于分类任务，同一输入多次运行应尽量得到同一结果，不需要随机采样造成的类别波动。</p>
+<p>验证集评测：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">python evaluate.py \</span><br><span class="line">  --adapter_dir outputs/qwen25-0.5b-json-lora \</span><br><span class="line">  --valid_file data/valid.jsonl</span><br></pre></td></tr></table></figure>
+
+<p>评测会统计四个指标：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Valid JSON</code></td>
+<td>模型输出是否可解析为 JSON</td>
+</tr>
+<tr>
+<td><code>Intent accuracy</code></td>
+<td><code>intent</code> 是否正确</td>
+</tr>
+<tr>
+<td><code>Urgency accuracy</code></td>
+<td><code>urgency</code> 是否正确</td>
+</tr>
+<tr>
+<td><code>Intent + urgency</code></td>
+<td>两个字段是否同时正确</td>
+</tr>
+</tbody></table>
+<p>当前评测不要求 <code>reply</code> 与标注逐字完全一致，因为多种客服表达都可能合理。它的重点是评估结构化输出与两个可客观判断的分类字段。</p>
+<hr>
+<h2 id="十四、这个实验的局限与下一步"><a href="#十四、这个实验的局限与下一步" class="headerlink" title="十四、这个实验的局限与下一步"></a>十四、这个实验的局限与下一步</h2><p>这个项目适合用来理解 SFT 和 LoRA，但它有明显局限：</p>
+<ol>
+<li>训练数据只有 48 条，覆盖范围很窄；</li>
+<li>验证集只有 12 条，统计结果波动较大；</li>
+<li>模型可能主要学习了关键词，而不是真正复杂的客服推理；</li>
+<li>没有奖励模型、强化学习或外部工具调用；</li>
+<li>没有处理提示注入、错误数据、长期记忆等 Agent 问题。</li>
+</ol>
+<p>下一步可以在相同任务上尝试强化学习：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">JSON 合法且字段齐全      → 给格式奖励</span><br><span class="line">intent 正确              → 给分类奖励</span><br><span class="line">urgency 正确             → 给分类奖励</span><br><span class="line">有多余文字或字段非法      → 给惩罚</span><br></pre></td></tr></table></figure>
+
+<p>然后比较：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">原始基础模型</span><br><span class="line">SFT 模型</span><br><span class="line">SFT + RL 模型</span><br></pre></td></tr></table></figure>
+
+<p>这样可以直观看到：SFT 用标准示范让模型先获得基本行为，而 RL 使用可验证反馈进一步强化目标输出。</p>
+<hr>
+<h2 id="十五、总结"><a href="#十五、总结" class="headerlink" title="十五、总结"></a>十五、总结</h2><p>本文的小项目展示了一个完整的参数高效微调流程：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">JSONL 样本</span><br><span class="line">→ Chat Template</span><br><span class="line">→ Tokenization</span><br><span class="line">→ response-only labels</span><br><span class="line">→ Qwen + LoRA</span><br><span class="line">→ 交叉熵损失</span><br><span class="line">→ 反向传播更新 LoRA</span><br><span class="line">→ 保存 adapter</span><br><span class="line">→ 推理与评测</span><br></pre></td></tr></table></figure>
+
+<p>其中最重要的几个结论是：</p>
+<ol>
+<li>SFT 的目标是提高标准答案 token 的条件概率；</li>
+<li><code>labels=-100</code> 表示 prompt 仍可被模型看到，但不参与 loss；</li>
+<li>LoRA 冻结基础模型，仅训练低秩增量 (BA)；</li>
+<li>LoRA 参数虽然少，但分布在多层 Attention 和 MLP 的关键路径上，能够有效调整已有模型能力的调用方式；</li>
+<li>对 Attention 而言，LoRA 修改了 Q、K、V、O 投影，使模型在生成答案时以不同方式选择、提取和传递上下文信息。</li>
+</ol>
+<hr>
+</div><div class="article-licensing box"><div class="licensing-title"><p>从SFT到LoRA：微调Qwen输出结构化JSON</p><p><a href="https://garyaacm.github.io/2026/09/11/从SFT到LoRA微调Qwen/">https://garyaacm.github.io/2026/09/11/从SFT到LoRA微调Qwen/</a></p></div><div class="licensing-meta level is-mobile"><div class="level-left"><div class="level-item is-narrow"><div><h6>作者</h6><a href="https://GaryAacm.github.io"><p>Gary</p></a></div></div><div class="level-item is-narrow"><div><h6>发布于</h6><p>2026-09-11</p></div></div><div class="level-item is-narrow"><div><h6>更新于</h6><p>2026-09-11</p></div></div><div class="level-item is-narrow"><div><h6>许可协议</h6><p><a class="icon" rel="noopener" target="_blank" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a><a class="icon" rel="noopener" target="_blank" title="Attribution" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a><a class="icon" rel="noopener" target="_blank" title="Noncommercial" href="https://creativecommons.org/licenses/by-nc/4.0/"><i class="fab fa-creative-commons-nc"></i></a></p></div></div></div></div></div><div class="recommend-area"><div class="recommend-post"><span class="is-size-6 has-text-grey has-mr-7"># 相关文章</span><br><span>  1.<a class="is-size-6" href="/2026/09/09/Paper_Survey/" target="_blank">从自我改进智能体到 Harness 工程：Recursive Self-Improving Agent 调研</a><br></span><span>  2.<a class="is-size-6" href="/2026/09/09/stf%E5%9F%BA%E7%A1%80/" target="_blank">SFT 基础</a><br></span><span>  3.<a class="is-size-6" href="/2026/08/18/ImageBind/" target="_blank">多模态全域对齐与 Agent 隐空间通信：ImageBind 核心机制、源码剖析与实战</a><br></span><span>  4.<a class="is-size-6" href="/2026/08/18/CLIP(1)/" target="_blank">多智能体隐空间通信与多模态 Memory：从 CLIP 表征对齐到 Latent 通信实践（1）</a><br></span><span>  5.<a class="is-size-6" href="/2025/05/27/BP%E5%9F%BA%E7%A1%80/" target="_blank">BP神经网络</a><br></span><span>  6.<a class="is-size-6" href="/2025/05/25/Transformer%E5%9F%BA%E7%A1%80/" target="_blank">Transformer基础</a><br></span><span>  7.<a class="is-size-6" href="/2025/05/25/CNN%E5%9F%BA%E7%A1%80/" target="_blank">卷积神经网络(CNN)</a><br></span><span>  8.<a class="is-size-6" href="/2025/05/25/YOLO%E5%9F%BA%E7%A1%80/" target="_blank">YOLO原理</a><br></span></div></div><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/social-share.js/1.0.16/css/share.min.css"><div class="social-share"></div><script src="https://cdnjs.loli.net/ajax/libs/social-share.js/1.0.16/js/social-share.min.js"></script></article></div><!--!--><nav class="post-navigation mt-4 level is-mobile"><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2026/09/09/Paper_Survey/"><span class="level-item">从自我改进智能体到 Harness 工程：Recursive Self-Improving Agent 调研</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><!--!--><div class="card"><div class="card-content"><div class="title is-5">评论</div><div id="comment-container"></div><link rel="stylesheet" href="https://cdnjs.loli.net/ajax/libs/gitalk/1.6.0/gitalk.css"><script> $.getScript('/js/gitalk.min.js', function () { 
+            var gitalk = new Gitalk({
+            language:'zh-CN',
+            id: '9f1a92c0895d6d792d9cb2472b6b48ea',
+            repo: 'blog_comment',
+            owner: 'Gray',
+            clientID: '46a9f3481b46ea0129d8',
+            clientSecret: '79c7c9cb847e141757d7864453bcbf89f0655b24',
+            admin: ["removeif"],
+            createIssueManually: true,
+            distractionFreeMode: false,
+            perPage: 10,
+            pagerDirection: 'last',
+            proxy: 'https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token',
+            
+            enableHotKey: true,
+            isLocked: false
+        })
+        gitalk.render('comment-container')});</script></div></div></div><div class="column column-left is-4-tablet is-4-desktop is-3-widescreen  order-1 is-sticky"><!--!--><div class="card widget" data-type="profile"><div class="card-content"><nav class="level"><div class="level-item has-text-centered flex-shrink-1"><div><figure class="image is-128x128 mx-auto mb-2"><img class="avatar is-rounded" src="https://cdn.jsdelivr.net/gh/GaryAacm/image-hosting@main/bg.jpg" alt="Gary"></figure><p class="title is-size-4 is-block" style="line-height:inherit;">Gary</p><p class="is-size-6 is-block">天下万般兵刃，唯有过往伤人最深</p><p class="is-size-6 is-flex justify-content-center"><i class="fas fa-map-marker-alt mr-1"></i><span>中国</span></p></div></div></nav><nav class="level is-mobile"><div class="level-item has-text-centered is-marginless"><div><p class="heading">文章</p><a href="/archives/"><p class="title">22</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">分类</p><a href="/categories/"><p class="title">5</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">标签</p><a href="/tags/"><p class="title">50</p></a></div></div></nav><div class="level"><a class="level-item button is-primary is-rounded" href="https://github.com/GaryAacm" target="_blank" rel="noopener">关注我</a></div><div class="level is-mobile"><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="Github" href="https://github.com/GaryAacm"><i class="fab fa-github"></i></a><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="RSS" href="/atom.xml"><i class="fas fa-rss"></i></a></div><div><hr><p id="hitokoto">:D 一言句子获取中...</p><script type="text/javascript" defer>function getYiyan(){
+                                $.getJSON("https://v1.hitokoto.cn/", function (data) {
+                                if(data){
+                                    $('#hitokoto').html("");
+                                    $('#hitokoto').append("<strong style='color: #3273dc;'>"+data.hitokoto+"</strong>"+
+                                    "<p>"+"来源《"+data.from+"》</p><p>提供者-"+data.creator+"</p>");
+                                }});}
+                                $(function (){getYiyan();$('#hitokoto').click(function(){getYiyan();})});</script></div></div></div><div class="card widget" data-type="links"><div class="card-content"><div class="menu"><h3 class="menu-label">链接</h3><ul class="menu-list"><li><a class="level is-mobile" href="https://hexo.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Hexo</span></span><span class="level-right"><span class="level-item tag">hexo.io</span></span></a></li><li><a class="level is-mobile" href="https://bulma.io" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Bulma</span></span><span class="level-right"><span class="level-item tag">bulma.io</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新评论</h3><span class="body_hot_comment">加载中，最新评论有1分钟缓存...</span></div></div><div class="card widget"><div class="card-content"><h3 class="menu-label">最新文章</h3><article class="media"><div class="media-content"><p class="date"><time dateTime="2026-09-11T13:30:00.000Z">2026-09-11</time></p><p class="title"><a href="/2026/09/11/%E4%BB%8ESFT%E5%88%B0LoRA%E5%BE%AE%E8%B0%83Qwen/">从SFT到LoRA：微调Qwen输出结构化JSON</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2026-09-09T15:20:00.000Z">2026-09-09</time></p><p class="title"><a href="/2026/09/09/Paper_Survey/">从自我改进智能体到 Harness 工程：Recursive Self-Improving Agent 调研</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2026-09-09T14:00:00.000Z">2026-09-09</time></p><p class="title"><a href="/2026/09/09/stf%E5%9F%BA%E7%A1%80/">SFT 基础</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2026-08-18T12:00:00.000Z">2026-08-18</time></p><p class="title"><a href="/2026/08/18/ImageBind/">多模态全域对齐与 Agent 隐空间通信：ImageBind 核心机制、源码剖析与实战</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2026-08-18T07:30:00.000Z">2026-08-18</time></p><p class="title"><a href="/2026/08/18/CLIP(1)/">多智能体隐空间通信与多模态 Memory：从 CLIP 表征对齐到 Latent 通信实践（1）</a></p><p class="categories"><a href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/">技术分享</a></p></div></article></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">分类</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BB%8B%E7%BB%8D/"><span class="level-start"><span class="level-item">个人介绍</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E6%8A%80%E6%9C%AF%E5%88%86%E4%BA%AB/"><span class="level-start"><span class="level-item">技术分享</span></span><span class="level-end"><span class="level-item tag">18</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E6%95%99%E7%A8%8B/"><span class="level-start"><span class="level-item">教程</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%BC%80%E5%8F%91/"><span class="level-start"><span class="level-item">机器人开发</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><li><a class="level is-mobile is-marginless" href="/categories/%E8%87%AA%E5%8A%A8%E9%A9%BE%E9%A9%B6/"><span class="level-start"><span class="level-item">自动驾驶</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">归档</h3><ul class="menu-list"><li><a class="level is-mobile is-marginless" href="/archives/2026/09/"><span class="level-start"><span class="level-item">九月 2026</span></span><span class="level-end"><span class="level-item tag">3</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2026/08/"><span class="level-start"><span class="level-item">八月 2026</span></span><span class="level-end"><span class="level-item tag">2</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2025/08/"><span class="level-start"><span class="level-item">八月 2025</span></span><span class="level-end"><span class="level-item tag">2</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2025/05/"><span class="level-start"><span class="level-item">五月 2025</span></span><span class="level-end"><span class="level-item tag">13</span></span></a></li><li><a class="level is-mobile is-marginless" href="/archives/2024/12/"><span class="level-start"><span class="level-item">十二月 2024</span></span><span class="level-end"><span class="level-item tag">1</span></span></a></li><a class="level is-mobile is-marginless" href="/archives/"><span class="level-start"><span class="level-item">查看全部&gt;&gt;</span></span></a></ul></div></div></div><div class="card widget"><div class="card-content"><div class="menu"><h3 class="menu-label">标签</h3><div class="field is-grouped is-grouped-multiline"><div class="control"><a class="tags has-addons" href="/tags/Python/"><span class="tag">Python</span><span class="tag is-grey-lightest">4</span></a></div><div class="control"><a class="tags has-addons" href="/tags/C/"><span class="tag">C++</span><span class="tag is-grey-lightest">3</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Multi-Agent/"><span class="tag">Multi-Agent</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/PyTorch/"><span class="tag">PyTorch</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/ROS2/"><span class="tag">ROS2</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/SFT/"><span class="tag">SFT</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E5%A4%9A%E6%A8%A1%E6%80%81/"><span class="tag">多模态</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E5%B5%8C%E5%85%A5%E5%BC%8F%E5%BC%80%E5%8F%91/"><span class="tag">嵌入式开发</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"><span class="tag">机器学习</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/"><span class="tag">深度学习</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/%E9%9A%90%E7%A9%BA%E9%97%B4%E9%80%9A%E4%BF%A1/"><span class="tag">隐空间通信</span><span class="tag is-grey-lightest">2</span></a></div><div class="control"><a class="tags has-addons" href="/tags/API/"><span class="tag">API</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Agent-Harness/"><span class="tag">Agent Harness</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/BP/"><span class="tag">BP</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/C-C/"><span class="tag">C++C</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/CLIP/"><span class="tag">CLIP</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/CNN/"><span class="tag">CNN</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/GPU/"><span class="tag">GPU</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/Git/"><span class="tag">Git</span><span class="tag is-grey-lightest">1</span></a></div><div class="control"><a class="tags has-addons" href="/tags/HTTP/"><span class="tag">HTTP</span><span class="tag is-grey-lightest">1</span></a></div></div><div class="field is-grouped is-grouped-multiline"><a class="tags has-addons" href="/tags/"><span class="tag">查看全部&gt;&gt;</span></a></div></div></div></div><div class="card widget" data-type="subscribe-email"><div class="card-content"><div class="menu"><h3 class="menu-label">订阅更新</h3><form action="https://feedburner.google.com/fb/a/mailverify" method="post" target="popupwindow" onsubmit="window.open(&#039;https://feedburner.google.com/fb/a/mailverify?uri=&#039;,&#039;popupwindow&#039;,&#039;scrollbars=yes,width=550,height=520&#039;);return true"><input type="hidden" value="" name="uri"><input type="hidden" name="loc" value="en_US"><div class="field has-addons"><div class="control has-icons-left is-expanded"><input class="input" name="email" type="email" placeholder="Email"><span class="icon is-small is-left"><i class="fas fa-envelope"></i></span></div><div class="control"><input class="button" type="submit" value="订阅"></div></div></form></div></div></div><!--!--><div class="column-right-shadow is-hidden-widescreen"></div></div></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/"><img src="https://cdn.jsdelivr.net/gh/removeif/removeif-demo@latest/img/logo.svg" alt="GaryBlog" height="28"></a><p class="size-small"><span>&copy; 2026 Gary</span>  Powered by <a href="https://hexo.io/" target="_blank">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank">Icarus</a> &amp; <a href="https://github.com/removeif/hexo-theme-amazing" target="_blank">Amazing</a> <br><span>© 版权说明：[本网站所有内容均收集于互联网或自己创作,<br />&nbsp;&nbsp;&nbsp;&nbsp;方便于网友与自己学习交流，如有侵权，请<a href="/message" target="_blank">留言</a>，立即处理]<br /></span><span><span id="statistic-times">loading...</span><script>function createTime(time) {
+            var n = new Date(time);
+            now.setTime(now.getTime() + 250),
+                days = (now - n) / 1e3 / 60 / 60 / 24,
+                dnum = Math.floor(days),
+                hours = (now - n) / 1e3 / 60 / 60 - 24 * dnum,
+                hnum = Math.floor(hours),
+            1 == String(hnum).length && (hnum = "0" + hnum),
+                minutes = (now - n) / 1e3 / 60 - 1440 * dnum - 60 * hnum,
+                mnum = Math.floor(minutes),
+            1 == String(mnum).length && (mnum = "0" + mnum),
+                seconds = (now - n) / 1e3 - 86400 * dnum - 3600 * hnum - 60 * mnum,
+                snum = Math.round(seconds),
+            1 == String(snum).length && (snum = "0" + snum),
+                document.getElementById("statistic-times").innerHTML = "❤️本站自 <strong>"+time.split(" ")[0].replace(/\//g,".")+"</strong> 已运行 <strong>" + dnum + "</strong> 天 <strong>" + hnum + "</strong> 小时 <strong>" + mnum + "</strong> 分 <strong>" + snum + "</strong> 秒！❤️";
+        }var now = new Date();setInterval("createTime('2024/09/01 00:00:00')", 250,"");</script><br></span><div class="size-small"><span>❤️感谢 <strong><span id="busuanzi_value_site_uv">99+</span></strong> 小伙伴的 <strong><span id="busuanzi_value_site_pv">99+</span></strong> 次光临！❤️</span></div></p></div><div class="level-end"><div class="field has-addons"><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Creative Commons" href="https://creativecommons.org/"><i class="fab fa-creative-commons"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/"><i class="fab fa-creative-commons-by"></i></a></p><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/removeif/hexo-theme-amazing"><i class="fab fa-github"></i></a></p></div><div class="sideMusic"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css"><script src="/js/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/npm/meting@2/dist/Meting.min.js"></script><meting-js style="width: auto;height: 2000px;" server="netease" type="playlist" id="2364053447" theme="#2980b9" loop="all" autoplay="false" order="list" storageName="aplayer-setting" lrctype="0" list-max-height="400px" fixed="true"></meting-js></div></div></div></div></footer><script src="https://cdnjs.loli.net/ajax/libs/moment.js/2.22.2/moment-with-locales.min.js"></script><script src="https://cdnjs.loli.net/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" async></script><script>moment.locale("zh-cn");</script><script>var IcarusThemeSettings = {
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="/js/column.js"></script><script src="/js/animation.js"></script><a id="back-to-top" title="回到顶端" href="javascript:;"><i class="fas fa-chevron-up"></i></a><script src="/js/back_to_top.js" defer></script><!--!--><!--!--><!--!--><script src="https://cdnjs.loli.net/ajax/libs/lightgallery/1.10.0/js/lightgallery.min.js" defer></script><script src="https://cdnjs.loli.net/ajax/libs/justifiedGallery/3.8.1/js/jquery.justifiedGallery.min.js" defer></script><script>window.addEventListener("load", () => {
+            if (typeof $.fn.lightGallery === 'function') {
+                $('.article').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof $.fn.justifiedGallery === 'function') {
+                if ($('.justified-gallery > p > .gallery-item').length) {
+                    $('.justified-gallery > p > .gallery-item').unwrap();
+                }
+                $('.justified-gallery').justifiedGallery();
+            }
+        });</script><!--!--><!--!--><script type="text/javascript" id="MathJax-script" async>MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']]
+      },
+      svg: {
+        fontCache: 'global'
+      },
+      chtml: {
+        matchFontHeight: false
+      }
+    };</script><script src="https://cdnjs.loli.net/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script><!--!--><script src="/js/main.js" defer></script><script>$.getScript('/js/comment-issue-data.js',function(){loadIssueData('46a9f3481b46ea0129d8','79c7c9cb847e141757d7864453bcbf89f0655b24','Gray','blog_comment',false);})</script><div class="searchbox"><div class="searchbox-container"><div class="searchbox-header"><div class="searchbox-input-container"><input class="searchbox-input" type="text" placeholder="想要查找什么..."></div><a class="searchbox-close" href="javascript:;">×</a></div><div class="searchbox-body"></div></div></div><script data-pjax src="/js/insight.js" defer></script><script data-pjax>document.addEventListener('DOMContentLoaded', function () {
+            loadInsight({"contentUrl":"/content.json"}, {"hint":"想要查找什么...","untitled":"(无标题)","posts":"文章","pages":"页面","categories":"分类","tags":"标签"});
+        });</script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.js"></script><script type="text/javascript">var pjax = new Pjax({
+            elements: "a",//代表点击链接就更新
+            selectors: [  //代表要更新的节点
+                ".section",
+                "title"
+            ],
+            cache: true,
+            cacheBust:false
+        })
+
+        function loadBusuanzi(){
+        $.getScript("//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js", function () {});
+        }
+
+        function loadMathJax() { //加载mathjax
+            $.getScript("//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML", function () {
+                MathJax.Hub.Config({ tex2jax: { inlineMath: [['$', '$'], ['\(', '\)']] } });
+                var math = document.getElementsByClassName("entry-content")[0];
+                MathJax.Hub.Queue(["Typeset", MathJax.Hub, math]);
+            });
+        };
+
+        // 开始 PJAX 执行的函数
+        document.addEventListener('pjax:send', function () {
+        });
+        
+        // PJAX 完成之后执行的函数，可以和上面的重载放在一起
+        document.addEventListener('pjax:complete', function () {
+            $(".section").css({opacity:1});
+            if(true){
+                $.getScript('/js/comment-issue-data.js',function(){loadIssueData('46a9f3481b46ea0129d8','79c7c9cb847e141757d7864453bcbf89f0655b24','Gray','blog_comment',false);});
+            }
+            if(false){
+                loadMathJax();
+            }
+            loadMainJs(jQuery, window.moment, window.ClipboardJS, window.IcarusThemeSettings);
+            loadBackTop();
+            loadBusuanzi();
+            if(typeof loadBanner == 'function'){
+                loadBanner();
+            }
+        });</script></body></html>
